@@ -1,9 +1,7 @@
 ### Requisitos
----
-# Sistema Simulador de Roteamento de Ordens
-- ### Versão do documento: (0.0)
+- #### Versão do documento: (0.1)
 
-## Escopo do projeto
+# Escopo do projeto
 - Desenvolvimento de um aplicativo Android para controle individual e por lotes de bovinos, gerenciamento de pastos, registro de vendas e controle de gastos gerais da fazenda.
 - O aplicativo deverá:
     - Funcionar integralmente sem internet;
@@ -16,7 +14,7 @@
     - Não depender de integrações externas;
     - Não enviar notificações.
 
-## Critério para qualidade do pasto
+# Critério para qualidade do pasto
 - A avaliação utilizará três informações:
     1. Altura do capim em relação ao intervalo adequado para o tipo cadastrado
     2. Condição do capim;
@@ -27,149 +25,167 @@
 | Boa      | Altura adequada, capim verde e cobertura igual ou superior a 80%        |
 | Regular  | Um dos três critérios estiver fora da condição considerada adequada     |
 | Ruim     | Dois ou mais critérios estiverem fora da condição considerada adequada  |
+- Esses parâmetros deverão poder ser alterados no aplicativo, pois a altura adequada varia conforme o tipo de capim.
 
-- Esses parâmetros deverão poder ser alterados no aplicativo, pois a altura adequada varia conforme o tipo de capim;
+# Requisitos funcionais
+1. ## Controle do gado
+    - **RF-01**: O sistema deve permitir o cadastro de animais individualmente.
+    - **RF-02**: Quando o usuário informar o número do brinco, o sistema deve verificar se já existe animal ativo com o mesmo número.
+    - **RF-02b**: Se existir animal ativo com o mesmo número de brinco, então o sistema deve exibir mensagem de erro e impedir o cadastro.
+    - **RF-03**: O cadastro deve conter número do brinco, sexo, data de nascimento ou idade estimada, raça e observações.
+    - **RF-03b**: Onde a data de nascimento estiver disponível, o sistema deve calcular a idade do animal automaticamente.
+    - **RF-04**: O sistema deve permitir a criação de lotes de animais.
+    - **RF-05**: Enquanto um animal pertencer a um lote, o sistema deve impedir sua vinculação a outro lote.
+    - **RF-06**: Quando o usuário selecionar um animal e um lote, o sistema deve permitir adicionar ou remover o animal do lote.
+    - **RF-07**: O sistema deve armazenar o histórico de todos os lotes aos quais o animal pertenceu.
+    - **RF-08**: O sistema deve permitir consultar animais pelo número do brinco, sexo, idade, raça, lote, pasto e situação.
+    - **RF-09**: O sistema deve apresentar a quantidade total de animais ativos na fazenda.
+    - **RF-10**: O sistema deve apresentar a quantidade de animais por sexo, lote, pasto e situação.
+    - **RF-11**: Quando o usuário alterar a situação do animal, o sistema deve permitir classificá-lo como ativo, vendido, morto ou transferido.
+    - **RF-12**: O sistema deve manter animais vendidos, mortos ou transferidos disponíveis para consulta no histórico.
+    - **RF-13b**: Quando o usuário selecionar um lote, o sistema deve permitir aplicar informações a todos os animais do lote.
+    - **RF-13c**: Onde o usuário optar por aplicar dados em lote, o sistema deve confirmar a ação antes de executar.
 
-## Requisitos funcionais
-1. ### Controle do gado
-    - **RF-01**: O sistema deverá permitir cadastrar cada animal individualmente utilizando o número do brinco como identificação principal.
-    - **RF-02**: O sistema não deverá permitir dois animais ativos com o mesmo número de brinco.
-    - **RF-03**: O cadastro deverá conter número do brinco, sexo, data de nascimento ou idade estimada, raça e observações.
-    - **RF-04**: O sistema deverá permitir criar lotes de animais.
-    - **RF-05**: Um animal poderá pertencer a apenas um lote por vez.
-    - **RF-06**: O sistema deverá permitir adicionar e remover animais de um lote.
-    - **RF-07**: O sistema deverá armazenar o histórico dos lotes aos quais o animal pertenceu.
-    - **RF-08**: O sistema deverá permitir consultar animais pelo número do brinco, sexo, idade, raça, lote, pasto e situação.
-    - **RF-09**: O sistema deverá apresentar a quantidade total de animais ativos na fazenda.
-    - **RF-10**: O sistema deverá apresentar a quantidade de animais por sexo, lote, pasto e situação.
-    - **RF-11**: O sistema deverá permitir classificar o animal como ativo, vendido, morto ou transferido.
-    - **RF-12**: Animais vendidos, mortos ou transferidos deverão continuar disponíveis no histórico.
-    - **RF-13**: O sistema deverá permitir cadastrar informações individualmente ou aplicar informações a todos os animais de um lote.
+    > ※ RF-13 é ambíguo. Visitar Seção "Perguntas a Serem Esclarecidas" — P-01
 
-2. ### Reprodução
-    - **RF-14**: O sistema deverá permitir registrar a situação reprodutiva das fêmeas como não avaliada, vazia, prenha ou parida.
-    - **RF-15**: Para uma fêmea prenha, o sistema deverá registrar a data da identificação da prenhez.
-    - **RF-16**: O sistema deverá permitir registrar uma previsão de parto.
-    - **RF-17**: O sistema deverá permitir registrar o nascimento de um bezerro e relacioná-lo à sua mãe.
-    - **RF-18**: Uma fêmea não poderá possuir simultaneamente as situações “prenha” e “vazia”.
+2. ## Reprodução
+    - **RF-14**: O sistema deve permitir registrar a situação reprodutiva das fêmeas como não avaliada, vazia, prenha ou parida.
+    - **RF-15**: Quando o usuário registrar uma fêmea como prenha, o sistema deve solicitar a data da identificação da prenhez.
+    - **RF-16**: Onde o usuário informar a data de cobertura, o sistema deve calcular automaticamente a previsão de parto.
+    - **RF-17**: Quando o usuário registrar o nascimento de um bezerro, o sistema deve solicitar a identificação da mãe e vincular o bezerro a ela.
+    - **RF-18**: Se o usuário tentar alterar a situação de uma fêmea para "vazia" enquanto estiver classificada como "prenha", então o sistema deve solicitar confirmação antes de alterar.
 
-3. ### Vacinação e saúde
-    - **RF-19**: O sistema deverá registrar as vacinas aplicadas individualmente ou por lote.
-    - **RF-20**: O registro da vacinação deverá conter nome da vacina, data, dose e observações.
-    - **RF-21**: O sistema deverá armazenar o histórico de vacinação de cada animal.
-    - **RF-22**: O sistema deverá permitir registrar se um animal está machucado.
-    - **RF-23**: Uma ocorrência de saúde deverá conter data, descrição, tratamento realizado e situação atual.
-    - **RF-24**: O sistema deverá permitir classificar uma ocorrência como em tratamento, recuperada ou encerrada.
-    - **RF-25**: O sistema deverá permitir consultar todos os animais que estejam machucados ou em tratamento.
-    - **RF-26**: O sistema não deverá enviar notificações sobre vacinas, tratamentos ou outras ocorrências.
+3. ## Vacinação e saúde
+    - **RF-19**: Quando o usuário registrar uma vacinação, o sistema deve permitir aplicá-la individualmente ou por lote.
+    - **RF-20**: O registro da vacinação deve conter nome da vacina, data, dose e observações.
 
-4. ### Gestão dos pastos
-    - **RF-27**: O sistema deverá permitir cadastrar os pastos existentes na fazenda.
-    - **RF-28**: O cadastro do pasto deverá conter nome, área em hectares, tipo de capim, altura atual do capim, condição de umidade e cobertura do solo.
-    - **RF-29**: A altura do capim deverá ser registrada em centímetros.
-    - **RF-30**: A condição do capim deverá ser classificada como verde, parcialmente seco ou seco.
-    - **RF-31**: A cobertura do pasto deverá ser informada como percentual de área coberta por capim, entre 0% e 100%.
-    - **RF-32**: O sistema deverá permitir registrar a altura mínima e máxima considerada adequada para cada tipo de capim.
-    - **RF-33**: O sistema deverá classificar a qualidade do pasto como ruim, regular ou boa, conforme os dados cadastrados.
-    - **RF-34**: O sistema deverá mostrar quantos animais estão presentes em cada pasto.
-    - **RF-35**: O sistema deverá permitir movimentar um animal ou lote entre pastos.
-    - **RF-36**: Cada movimentação deverá registrar pasto de origem, pasto de destino e data.
-    - **RF-37**: O sistema deverá calcular o tempo de permanência do animal ou lote no pasto.
-    - **RF-38**: O sistema deverá registrar o histórico de rotação dos pastos.
-    - **RF-39**: O sistema deverá calcular o período de descanso do pasto entre a saída e a entrada de animais.
+    > ※ RF-20 é incompleto (falta referência ao animal vacinado). Visitar Seção "Perguntas a Serem Esclarecidas" — P-20
 
-5. ### Vendas
-    - **RF-40**: O sistema deverá permitir registrar uma venda de um animal ou lote.
-    - **RF-41**: A venda deverá conter data, animais vendidos, comprador, peso total, valor bruto e observações.
-    - **RF-42**: O sistema deverá calcular a quantidade de animais incluídos na venda.
-    - **RF-43**: Após a conclusão da venda, os animais deverão receber automaticamente a situação “vendido”.
-    - **RF-44**: Animais vendidos não deverão aparecer na quantidade atual de cabeças da fazenda.
-    - **RF-45**: O sistema deverá disponibilizar o histórico de vendas.
-    - **RF-46**: O sistema deverá permitir consultar vendas por período, comprador, animal ou lote.
-    - **RF-47**: O sistema deverá permitir registrar uma próxima venda planejada.
-    - **RF-48**: O planejamento da venda deverá conter data prevista, animais ou lote e valor estimado.
-    - **RF-49**: O sistema não deverá enviar notificações sobre vendas planejadas.
+    - **RF-21**: O sistema deve armazenar o histórico de vacinação de cada animal.
+    - **RF-22**: Quando o usuário registrar uma ocorrência de saúde, o sistema deve permitir descrever o machucado com data, descrição e tratamento.
+    - **RF-23**: Uma ocorrência de saúde deve conter data, descrição, tratamento realizado e situação atual.
+    - **RF-24**: Quando o usuário alterar a situação de uma ocorrência, o sistema deve permitir classificá-la como em tratamento, recuperada ou encerrada.
+    - **RF-25**: O sistema deve permitir consultar todos os animais que estejam machucados ou em tratamento.
+    - **RF-26**: O sistema não deve enviar notificações sobre vacinas, tratamentos ou outras ocorrências.
 
-6. ### Gastos gerais
-    - **RF-50**: O sistema deverá permitir registrar gastos gerais da fazenda.
-    - **RF-51**: Cada gasto deverá possuir descrição, categoria, valor e data.
-    - **RF-52**: As categorias disponíveis deverão ser: água, ração, mão de obra e infraestrutura.
-    - **RF-53**: O sistema deverá permitir cadastrar outros gastos dentro dessas quatro categorias.
-    - **RF-54**: O sistema deverá permitir editar e excluir um gasto registrado incorretamente.
-    - **RF-55**: O sistema deverá permitir consultar gastos por período e categoria.
-    - **RF-56**: O sistema deverá calcular o total gasto por categoria.
-    - **RF-57**: O sistema deverá calcular o total geral de gastos da fazenda.
-    - **RF-58**: O sistema deverá calcular o resultado financeiro pela fórmula: valor bruto das vendas menos gastos gerais.
+    > ※ RF-22 e RF-23 possuem sobreposição conceitual. Visitar Seção "Perguntas a Serem Esclarecidas" — P-04 e P-13
 
-7. ### Relatórios
-    - **RF-59**: O sistema deverá gerar relatório de controle do gado.
-    - **RF-60**: O relatório de controle do gado deverá apresentar quantidade total de animais, animais por sexo, situação, lote e pasto.
-    - **RF-61**: O relatório de controle do gado deverá permitir incluir informações de reprodução, vacinação e saúde.
-    - **RF-62**: O sistema deverá gerar relatório de vendas por período.
-    - **RF-63**: O relatório de vendas deverá apresentar animais vendidos, comprador, data, quantidade e valor bruto.
-    - **RF-64**: O sistema deverá gerar relatório de gastos por período.
-    - **RF-65**: O relatório de gastos deverá apresentar os valores de água, ração, mão de obra e infraestrutura.
-    - **RF-66**: O sistema deverá gerar um resumo financeiro contendo vendas, gastos e resultado.
-    - **RF-67**: Os relatórios deverão poder ser visualizados na tela do aplicativo.
-    - **RF-68**: Os relatórios deverão poder ser exportados em formato PDF.
+4. ## Gestão dos pastos
+    - **RF-27**: O sistema deve permitir o cadastro dos pastos existentes na fazenda.
+    - **RF-28**: O cadastro do pasto deve conter nome, área em hectares, tipo de capim, altura atual do capim, condição de umidade e cobertura do solo.
+    - **RF-29**: A altura do capim deve ser registrada em centímetros.
+    - **RF-30**: A condição do capim deve ser classificada como verde, parcialmente seco ou seco.
+    - **RF-31**: A cobertura do pasto deve ser informada como percentual de área coberta por capim, entre 0% e 100%.
+    - **RF-32**: Onde o usuário cadastrar um tipo de capim, o sistema deve permitir registrar a altura mínima e máxima considerada adequada.
+    - **RF-33**: Quando os dados do pasto estiverem completos, o sistema deve classificar automaticamente a qualidade como ruim, regular ou boa.
+    - **RF-34**: O sistema deve mostrar a quantidade de animais presentes em cada pasto.
+    - **RF-35**: Quando o usuário selecionar um animal ou lote e um pasto de destino, o sistema deve permitir a movimentação entre pastos.
+    - **RF-36**: Cada movimentação deve registrar pasto de origem, pasto de destino e data.
+    - **RF-37**: O sistema deve calcular o tempo de permanência do animal ou lote no pasto.
+    - **RF-38**: O sistema deve registrar o histórico de rotação dos pastos.
+    - **RF-39**: O sistema deve calcular o período de descanso do pasto entre a saída e a entrada de animais.
 
-8. ### Armazenamento e backup
-    - **RF-69**: Todas as funcionalidades deverão operar sem conexão com a internet.
-    - **RF-70**: Os dados deverão ser armazenados localmente no dispositivo Android.
-    - **RF-71**: O sistema deverá manter os dados disponíveis após o aplicativo ser fechado ou o aparelho ser reiniciado.
-    - **RF-72**: O sistema deverá permitir criar manualmente um arquivo de backup.
-    - **RF-73**: O sistema deverá permitir restaurar os dados utilizando um arquivo de backup válido.
-    - **RF-74**: Antes da restauração, o sistema deverá solicitar confirmação do usuário.
-    - **RF-75**: O sistema deverá informar a data e o horário do último backup realizado.
+    > ※ RF-37 e RF-39 são incompletos (unidade de medida não definida). Visitar Seção "Perguntas a Serem Esclarecidas" — P-14 e P-15
 
-## Requisitos não funcionais
-1. ### Plataforma
-    - **RNF-01**: O aplicativo deverá ser desenvolvido exclusivamente para Android.
-2. ### Compatibilidade
-    - **RNF-02**: O aplicativo deverá funcionar no Android 10 ou superior.
-3. ### Operação offline
-    - **RNF-03**: Nenhuma funcionalidade deverá exigir conexão com a internet.
-4. ### Capacidade
-    - **RNF-04**: O aplicativo deverá suportar pelo menos 500 animais cadastrados.
-5. ### Desempenho
-    - **RNF-05**: Consultas com até 500 animais deverão ser apresentadas em até 2 segundos.
-    - **RNF-06**: Relatórios deverão ser gerados em até 5 segundos.
-6. ### Usabilidade
-    - **RNF-07**: O cadastro de um novo animal deverá ser concluído em, no máximo, três telas.
-    - **RNF-08**: A tela inicial deverá apresentar atalhos para gado, pastos, vendas, gastos e relatórios.
-    - **RNF-09**: As mensagens de erro deverão explicar o problema e indicar como corrigi-lo.
-7. ### Confiabilidade
-    - **RNF-10**: Uma operação somente deverá ser apresentada como concluída após ser salva no aparelho.
-8. ### Segurança
-    - **RNF-11**: Os dados do aplicativo deverão permanecer protegidos pelo mecanismo de segurança do Android.
-    - **RNF-12**: O aplicativo deverá permitir configurar senha ou PIN de acesso.
-    - **RNF-13**: O arquivo de backup deverá ser protegido contra alterações não autorizadas.
-9. ### Manutenibilidade
-    - **RNF-14**: O código deverá ser dividido em componentes com responsabilidades definidas e baixo acoplamento.
-    - **RNF-15**: Os cálculos financeiros e as regras relacionadas aos animais deverão possuir testes automatizados.
-10. ### Portabilidade dos dados
-    - **RNF-16**: O backup deverá poder ser copiado para outro dispositivo Android compatível.
-11. ### Interface
-    - **RNF-17**: O aplicativo deverá utilizar textos em português brasileiro.
-    - **RNF-18**: Valores financeiros deverão ser apresentados em reais e datas no formato DD/MM/AAAA.
+5. ## Vendas
+    - **RF-40**: Quando o usuário iniciar um registro de venda, o sistema deve permitir selecionar animais ou lotes para venda.
+    - **RF-41**: A venda deve conter data, animais vendidos, comprador, peso total, valor bruto e observações.
+    - **RF-42**: O sistema deve calcular automaticamente a quantidade de animais incluídos na venda.
+    - **RF-43**: Quando a venda for confirmada pelo usuário, o sistema deve alterar automaticamente a situação de todos os animais vendidos para "vendido".
+    - **RF-44**: Enquanto um animal estiver com situação "vendido", o sistema deve excluí-lo da contagem de cabeças ativas.
+    - **RF-45**: O sistema deve disponibilizar o histórico completo de vendas.
+    - **RF-46**: O sistema deve permitir consultar vendas por período, comprador, animal ou lote.
+    - **RF-47**: Onde o usuário desejar planejar uma venda futura, o sistema deve permitir registrar uma venda planejada.
+    - **RF-48**: O planejamento da venda deve conter data prevista, animais ou lote e valor estimado.
+    - **RF-49**: O sistema não deve enviar notificações sobre vendas planejadas.
 
-## Requisitos de domínio
+    > ※ RF-47/RF-48 são ambíguos. Visitar Seção "Perguntas a Serem Esclarecidas" — P-07
+
+6. ## Gastos gerais
+    - **RF-50**: O sistema deve permitir o registro de gastos gerais da fazenda.
+    - **RF-51**: Cada gasto deve possuir descrição, categoria, valor e data.
+    - **RF-52**: As categorias disponíveis devem ser: água, ração, mão de obra e infraestrutura.
+
+    > ※ RF-52 é incompleto (não define se categorias são fixas ou expansíveis). Visitar Seção "Perguntas a Serem Esclarecidas" — P-17
+    - **RF-53**: O sistema deve permitir cadastrar múltiplos gastos dentro de cada uma das quatro categorias.
+    - **RF-54**: Quando o usuário selecionar um gasto registrado, o sistema deve permitir editá-lo ou excluí-lo.
+    - **RF-55**: O sistema deve permitir consultar gastos por período e categoria.
+    - **RF-56**: O sistema deve calcular o total gasto por categoria.
+    - **RF-57**: O sistema deve calcular o total geral de gastos da fazenda.
+    - **RF-58**: Quando o usuário solicitar o resultado financeiro, o sistema deve calcular valor bruto das vendas menos gastos gerais do período selecionado.
+
+    > ※ RF-53 e RF-58 são ambíguos. Visitar Seção "Perguntas a Serem Esclarecidas" — P-08, P-09 e P-16
+
+7. ## Relatórios
+    - **RF-59**: O sistema deve gerar o relatório de controle do gado.
+    - **RF-60**: O relatório de controle do gado deve apresentar quantidade total de animais, animais por sexo, situação, lote e pasto.
+    - **RF-61**: Onde o usuário solicitar, o sistema deve incluir no relatório informações de reprodução, vacinação e saúde.
+    - **RF-62**: O sistema deve gerar o relatório de vendas por período.
+    - **RF-63**: O relatório de vendas deve apresentar animais vendidos, comprador, data, quantidade e valor bruto.
+    - **RF-64**: O sistema deve gerar o relatório de gastos por período.
+    - **RF-65**: O relatório de gastos deve apresentar os valores por categoria (água, ração, mão de obra, infraestrutura).
+    - **RF-66**: O sistema deve gerar um resumo financeiro contendo vendas, gastos e resultado.
+    - **RF-67**: O sistema deve permitir a visualização dos relatórios na tela do aplicativo.
+    - **RF-68**: Quando o usuário solicitar, o sistema deve exportar o relatório em formato PDF.
+
+8. ## Armazenamento e backup
+    - **RF-69**: O sistema deve operar integralmente sem conexão com a internet.
+    - **RF-70**: Os dados devem ser armazenados localmente no dispositivo Android.
+    - **RF-71**: O sistema deve manter os dados disponíveis após o aplicativo ser fechado ou o aparelho ser reiniciado.
+    - **RF-72**: Quando o usuário solicitar, o sistema deve criar um arquivo de backup.
+    - **RF-73**: Quando o usuário selecionar um arquivo de backup válido, o sistema deve restaurar os dados.
+    - **RF-74**: Onde o usuário iniciar uma restauração, o sistema deve solicitar confirmação antes de executar.
+    - **RF-75**: O sistema deve informar a data e o horário do último backup realizado.
+
+    > ※ RF-72 e RF-73 são ambíguos. Visitar Seção "Perguntas a Serem Esclarecidas" — P-10 e P-18
+
+# Requisitos não funcionais
+1. ## Plataforma
+    - **RNF-01**: O aplicativo deve ser desenvolvido exclusivamente para Android.
+2. ## Compatibilidade
+    - **RNF-02**: O aplicativo deve funcionar no Android 10 ou superior.
+3. ## Operação offline
+    - **RNF-03**: Nenhuma funcionalidade deve exigir conexão com a internet.
+4. ## Capacidade
+    - **RNF-04**: O aplicativo deve suportar pelo menos 500 animais cadastrados.
+5. ## Desempenho
+    - **RNF-05**: Consultas com até 500 animais devem ser apresentadas em até 2 segundos.
+    - **RNF-05b**: Se o tempo de resposta de uma consulta exceder 2 segundos, então o sistema deve exibir indicador de carregamento.
+    - **RNF-06**: Relatórios devem ser gerados em até 5 segundos.
+    - **RNF-06b**: Se o tempo de geração de relatório exceder 5 segundos, então o sistema deve exibir indicador de progresso.
+
+    > ※ RNF-05b e RNF-06b são inconsistentes com RNF-05 e RNF-06 (indicador não resolve o requisito de desempenho). Visitar Seção "Perguntas a Serem Esclarecidas" — P-19
+6. ## Usabilidade
+    - **RNF-07**: O cadastro de um novo animal deve ser concluído em no máximo três passos de tela.
+    - **RNF-08**: A tela inicial deve apresentar atalhos para gado, pastos, vendas, gastos e relatórios.
+    - **RNF-09**: Quando ocorrer um erro, o sistema deve exibir mensagem que explique o problema e indique como corrigi-lo.
+7. ## Confiabilidade
+    - **RNF-10**: Uma operação somente deve ser apresentada como concluída após ser salva no aparelho.
+8. ## Segurança
+    - **RNF-11**: Os dados do aplicativo devem permanecer protegidos pelo mecanismo de segurança do Android.
+    - **RNF-12**: O aplicativo deve permitir configurar senha ou PIN de acesso.
+    - **RNF-13**: O arquivo de backup deve ser protegido contra alterações não autorizadas.
+    - **RNF-13b**: Se houver tentativa de acesso com PIN incorreto 3 vezes consecutivas, então o sistema deve bloquear o acesso por 5 minutos.
+9. ## Manutenibilidade
+    - **RNF-14**: O código deve ser dividido em componentes com responsabilidades definidas e baixo acoplamento.
+    - **RNF-15**: Os cálculos financeiros e as regras relacionadas aos animais devem possuir testes automatizados.
+10. ## Portabilidade dos dados
+    - **RNF-16**: O backup deve poder ser copiado para outro dispositivo Android compatível.
+11. ## Interface
+    - **RNF-17**: O aplicativo deve utilizar textos em português brasileiro.
+    - **RNF-18**: Valores financeiros devem ser apresentados em reais, com duas casas decimais, e datas no formato DD/MM/AAAA.
+
+    > ※ RNF-07 e RNF-13 são ambíguos. Visitar Seção "Perguntas a Serem Esclarecidas" — P-11 e P-12
+
+# Requisitos de domínio
 - **RD-01**: O número do brinco será a identificação principal do animal.
 - **RD-02**: O sistema deverá trabalhar com controle individual e controle por lotes.
 - **RD-03**: Um animal poderá pertencer a apenas um lote e um pasto por vez.
-- **RD-04**: O histórico do animal deverá permanecer armazenado após venda, morte ou transferência.
-- **RD-05**: A idade deverá ser calculada pela data de nascimento, quando essa informação estiver disponível.
-- **RD-06**: Pesos deverão ser registrados em quilogramas.
-- **RD-07**: A área dos pastos deverá ser registrada em hectares.
-- **RD-08**: A altura do capim deverá ser registrada em centímetros.
-- **RD-09**: A altura adequada deverá ser configurada conforme o tipo de capim.
-- **RD-10**: A qualidade do pasto deverá considerar altura, condição do capim e percentual de cobertura.
-- **RD-11**: Valores financeiros deverão ser registrados em reais, com duas casas decimais.
-- **RD-12**: Animais vendidos, mortos ou transferidos não deverão ser contabilizados como cabeças ativas.
-- **RD-13**: Não haverá integração com balanças, RFID, sistemas contábeis ou sistemas governamentais.
-- **RD-14**: Não haverá sincronização com servidores externos ou armazenamento obrigatório em nuvem.
+- **RD-04**: Pesos deverão ser registrados em quilogramas.
+- **RD-05**: A área dos pastos deverá ser registrada em hectares.
+- **RD-06**: A altura do capim deverá ser registrada em centímetros.
 
-## Resumo da configuração definida
+# Resumo da configuração definida
 - **Plataforma**: Android
 - **Internet**: Totalmente offline
 - **Usuários**: Um usuário
@@ -182,3 +198,28 @@
 - **Notificações**: Não haverá
 - **Integrações externas**: Não haverá
 - **Armazenamento**: Local, com backup manual
+
+# Perguntas a Serem Esclarecidas
+
+| ID  | Requisito | Pergunta | Resposta | Status |
+|-----|-----------|----------|----------|--------|
+| P-01 | RF-13 | Quais informações podem ser aplicadas em lote? Apenas vacinas e saúde, ou também dados como raça, observações e situação? | — | ⏳ Pendente |
+| P-02 | RF-15 | A data da identificação da prenhez é a data do exame/veterinário ou a data em que o usuário registrou no app? | — | ⏳ Pendente |
+| P-03 | RF-16 | A previsão de parto é digitada manualmente pelo usuário ou o sistema calcula automaticamente a partir da data de cobertura (ex: 9 meses)? | — | ⏳ Pendente |
+| P-04 | RF-22/23 | "Machucado" (RF-22) é uma ocorrência de saúde separada ou a mesma coisa que "ocorrência de saúde" (RF-23)? Qual a diferença prática? | — | ⏳ Pendente |
+| P-05 | RF-33 | A classificação de qualidade do pasto é automática (recalcula ao salvar os dados) ou o usuário precisa solicitar explicitamente? | — | ⏳ Pendente |
+| P-06 | RF-41 | Todos os campos da venda (data, animais, comprador, peso, valor, observações) são obrigatórios? O peso total é a soma dos pesos individuais ou um valor digitado? O campo "comprador" é texto livre ou cadastro prévio? | — | ⏳ Pendente |
+| P-07 | RF-47/48 | Uma venda planejada pode se tornar uma venda realizada (转化) ou são coisas totalmente separadas? A venda planejada deve aparecer em algum relatório? | — | ⏳ Pendente |
+| P-08 | RF-53 | O que significa "cadastrar outros gastos dentro dessas quatro categorias"? É permitir subcategorias dentro de água/ração/mão de obra/infraestrutura, ou apenas cadastrar múltiplos registros na mesma categoria? | — | ⏳ Pendente |
+| P-09 | RF-58 | A fórmula "valor bruto das vendas menos gastos gerais" considera vendas e gastos de que período? Se o usuário consultar um período específico, o cálculo deve filtrar por esse período? | — | ⏳ Pendente |
+| P-10 | RF-72/73 | Qual o formato do arquivo de backup (JSON, ZIP, proprietário)? Onde o arquivo é salvo (pasta de downloads, pasta específica do app)? O usuário pode escolher o local? | — | ⏳ Pendente |
+| P-11 | RNF-07 | "Três telas" no cadastro de animal conta com a tela inicial? É "três telas" no sentido de "três passos" ou literalmente três telas diferentes? | — | ⏳ Pendente |
+| P-12 | RNF-13 | Como o arquivo de backup deve ser protegido contra alterações não autorizadas? Criptografia? Formato proprietário? Ou apenas verificação de integridade (hash)? | — | ⏳ Pendente |
+| P-13 | RF-22/23 | Unificar "machucado" e "ocorrência de saúde" em um único conceito de "ocorrência de saúde"? Ou "machucado" deve permanecer como um tipo específico de ocorrência? | — | ⏳ Pendente |
+| P-14 | RF-37 | O tempo de permanência no pasto deve ser exibido em dias, horas ou em formato combinado (ex: "5 dias e 3 horas")? | — | ⏳ Pendente |
+| P-15 | RF-39 | O período de descanso do pasto deve ser exibido em dias? | — | ⏳ Pendente |
+| P-16 | RF-58 | Se o usuário não selecionar um período, o resultado financeiro deve considerar todo o histórico de vendas e gastos? | — | ⏳ Pendente |
+| P-17 | RF-52 | As quatro categorias de gastos são fixas ou o sistema deve permitir que o usuário crie novas categorias? | — | ⏳ Pendente |
+| P-18 | RF-73 | O que define um arquivo de backup como "válido"? Formato correto, integridade (hash), versão compatível — ou os três critérios? | — | ⏳ Pendente |
+| P-19 | RNF-05b/06b | Os requisitos RNF-05b e RNF-06b (exibir indicador de carregamento ao exceder o limite) contradizem os requisitos de desempenho RNF-05/06. Devemos remover os indicadores e manter apenas os limites de desempenho, ou manter os indicadores como comportamento adicional? | — | ⏳ Pendente |
+| P-20 | RF-20 | O registro de vacinação deve conter também a referência ao(s) animal(is) vacinado(s), ou essa vinculação já está implícita em RF-19 (aplicação individual ou por lote)? | — | ⏳ Pendente |
