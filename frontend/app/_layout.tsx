@@ -6,10 +6,12 @@ import {
 } from '@expo-google-fonts/geist';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { inicializarBanco } from '../src/data/sqlite/database';
 import { cores, fonte, tipografia } from '../src/theme/tokens';
 
 // Segura a splash ate a Geist estar pronta, senao a primeira renderizacao sai
@@ -50,8 +52,9 @@ export default function LayoutRaiz() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
+      <SQLiteProvider databaseName="bovr.db" onInit={inicializarBanco}>
+        <Stack
+          screenOptions={{
           // Mesmo tom do chao: com o canvas verde, um cabecalho branco criava
           // uma emenda visivel na altura da barra de status.
           headerStyle: { backgroundColor: cores.canvas },
@@ -63,15 +66,20 @@ export default function LayoutRaiz() {
           headerShadowVisible: false,
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: cores.canvas },
-        }}
-      >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="gado" options={{ title: 'Gado' }} />
-        <Stack.Screen name="pastos" options={{ title: 'Pastos' }} />
-        <Stack.Screen name="vendas" options={{ title: 'Vendas' }} />
-        <Stack.Screen name="gastos" options={{ title: 'Gastos' }} />
-        <Stack.Screen name="relatorios" options={{ title: 'Relatórios' }} />
-      </Stack>
+          }}
+        >
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="gado" options={{ title: 'Gado' }} />
+          <Stack.Screen name="pastos" options={{ title: 'Pastos' }} />
+          <Stack.Screen name="pasto-form" options={{ title: 'Cadastro de pasto' }} />
+          <Stack.Screen name="tipos-capim" options={{ title: 'Tipos de capim' }} />
+          <Stack.Screen name="vendas" options={{ title: 'Vendas' }} />
+          <Stack.Screen name="gastos" options={{ title: 'Gastos' }} />
+          <Stack.Screen name="gasto-form" options={{ title: 'Registro de gasto' }} />
+          <Stack.Screen name="categorias-gasto" options={{ title: 'Categorias de gasto' }} />
+          <Stack.Screen name="relatorios" options={{ title: 'Relatórios' }} />
+        </Stack>
+      </SQLiteProvider>
     </SafeAreaProvider>
   );
 }
