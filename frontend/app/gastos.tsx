@@ -1,15 +1,9 @@
-import { EmBreve } from '../src/components/EmBreve';
-
+import { Feather } from '@expo/vector-icons'; import { useFocusEffect, useRouter } from 'expo-router'; import { useCallback, useState } from 'react'; import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Botao } from '../src/components/Botao'; import { Cartao } from '../src/components/Cartao'; import { EstadoTela } from '../src/components/EstadoTela'; import { Tela } from '../src/components/Tela'; import { useServicoGastos } from '../src/data/sqlite/expenseServices'; import { mensagemErro } from '../src/domain/errors'; import type { Gasto } from '../src/features/expenses/types'; import { dataIsoParaPtBr } from '../src/features/expenses/validation'; import { moeda } from '../src/lib/formato'; import { cores, espaco, tipografia, toque } from '../src/theme/tokens';
 export default function TelaGastos() {
-  return (
-    <EmBreve
-      titulo="Gastos Gerais"
-      requisitos={[
-        'RF-22  Registro por descrição, categoria, valor e data',
-        'RF-22.3  Categorias e subcategorias criadas pelo usuário',
-        'RF-24  Filtro por período e total por categoria',
-        'RF-25  Resultado financeiro: vendas menos gastos',
-      ]}
-    />
-  );
+  const router = useRouter(); const servico = useServicoGastos(); const [gastos, setGastos] = useState<Gasto[]>([]); const [carregando, setCarregando] = useState(true); const [erro, setErro] = useState<string | null>(null);
+  const carregar = useCallback(async () => { setCarregando(true); try { setGastos(await servico.listarGastos()); setErro(null); } catch (causa) { setErro(mensagemErro(causa)); } finally { setCarregando(false); } }, [servico]); useFocusEffect(useCallback(() => { void carregar(); }, [carregar]));
+  const excluir = (gasto: Gasto) => Alert.alert('Excluir gasto?', `O gasto “${gasto.descricao}” será excluído definitivamente.`, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Excluir', style: 'destructive', onPress: async () => { try { await servico.excluirGasto(gasto.id); await carregar(); } catch (causa) { Alert.alert('Não foi possível excluir', mensagemErro(causa)); } } }]);
+  return <Tela><View style={estilos.acoes}><Botao titulo="Registrar gasto" onPress={() => router.push('/gasto-form')} /><Botao titulo="Categorias e subcategorias" variante="secundario" onPress={() => router.push('/categorias-gasto')} /></View>{carregando ? <EstadoTela mensagem="Carregando gastos…" carregando /> : null}{erro ? <EstadoTela mensagem={erro} /> : null}{!carregando && !erro && gastos.length === 0 ? <EstadoTela mensagem="Nenhum gasto registrado." /> : null}{gastos.map((gasto) => <Cartao key={gasto.id} style={estilos.cartao}><View style={estilos.cabecalho}><View style={estilos.info}><Text style={estilos.titulo}>{gasto.descricao}</Text><Text style={estilos.categoria}>{gasto.categoriaNome}{gasto.subcategoriaNome ? ` · ${gasto.subcategoriaNome}` : ''}</Text></View><Pressable accessibilityLabel={`Editar ${gasto.descricao}`} onPress={() => router.push({ pathname: '/gasto-form', params: { id: String(gasto.id) } })} style={estilos.icone}><Feather name="edit-2" size={20} color={cores.tinta} /></Pressable></View><View style={estilos.valores}><Text style={estilos.valor}>{moeda(gasto.valorCentavos / 100)}</Text><Text style={estilos.data}>{dataIsoParaPtBr(gasto.data)}</Text></View><Botao titulo="Excluir" variante="perigo" onPress={() => excluir(gasto)} /></Cartao>)}</Tela>;
 }
+const estilos = StyleSheet.create({ acoes: { gap: espaco.sm }, cartao: { gap: espaco.lg }, cabecalho: { flexDirection: 'row', gap: espaco.md }, info: { flex: 1, gap: espaco.xs }, titulo: { ...tipografia.subheading, color: cores.tinta }, categoria: { ...tipografia.body, color: cores.cinzaMedio }, icone: { minWidth: toque.alvoMinimo, minHeight: toque.alvoMinimo, alignItems: 'center', justifyContent: 'center' }, valores: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: espaco.sm }, valor: { ...tipografia.headingSm, color: cores.tinta }, data: { ...tipografia.body, color: cores.cinzaMedio } });
