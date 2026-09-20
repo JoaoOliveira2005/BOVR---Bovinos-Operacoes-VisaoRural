@@ -1,72 +1,83 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BadgeQualidade } from '../src/components/BadgeQualidade';
+import { Botao } from '../src/components/Botao';
 import { Cartao } from '../src/components/Cartao';
-import { EmBreve } from '../src/components/EmBreve';
-import { cores, espaco, tipografia, type Qualidade } from '../src/theme/tokens';
+import { EstadoTela } from '../src/components/EstadoTela';
+import { Tela } from '../src/components/Tela';
+import { useServicoPastos } from '../src/data/sqlite/pastureServices';
+import { mensagemErro } from '../src/domain/errors';
+import type { Pasto } from '../src/features/pastures/types';
+import { cores, espaco, tipografia, toque } from '../src/theme/tokens';
 
-/**
- * Critério de classificação do Documento de Visão (RF-15.2). Fica aqui só como
- * legenda visual; o cálculo em si entra com o módulo, junto do cadastro de
- * pasto e da leitura datada que o P-05 exige.
- */
-const CRITERIOS: { qualidade: Qualidade; criterio: string }[] = [
-  { qualidade: 'boa', criterio: 'Altura adequada, capim verde e cobertura ≥ 80%' },
-  { qualidade: 'regular', criterio: 'Um dos três critérios fora da condição adequada' },
-  { qualidade: 'ruim', criterio: 'Dois ou mais critérios fora da condição adequada' },
-];
+const ROTULOS_CONDICAO = { verde: 'Verde', parcialmente_seco: 'Parcialmente seco', seco: 'Seco' } as const;
 
 export default function TelaPastos() {
+  const router = useRouter();
+  const servico = useServicoPastos();
+  const [pastos, setPastos] = useState<Pasto[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    try { setPastos(await servico.listarPastos()); setErro(null); }
+    catch (causa) { setErro(mensagemErro(causa)); }
+    finally { setCarregando(false); }
+  }, [servico]);
+
+  useFocusEffect(useCallback(() => { void carregar(); }, [carregar]));
+
+  const excluir = (pasto: Pasto) => Alert.alert('Excluir pasto?', `O pasto “${pasto.nome}” será excluído definitivamente.`, [
+    { text: 'Cancelar', style: 'cancel' },
+    { text: 'Excluir', style: 'destructive', onPress: async () => {
+      try { await servico.excluirPasto(pasto.id); await carregar(); }
+      catch (causa) { Alert.alert('Não foi possível excluir', mensagemErro(causa)); }
+    } },
+  ]);
+
   return (
-    <EmBreve
-      titulo="Gestão dos Pastos"
-      previa={
-        <Cartao>
-          <Text style={estilos.titulo}>Qualidade do pasto</Text>
-          <View style={estilos.lista}>
-            {CRITERIOS.map(({ qualidade, criterio }) => (
-              <View key={qualidade} style={estilos.linha}>
-                <View style={estilos.coluna}>
-                  <BadgeQualidade qualidade={qualidade} />
-                </View>
-                <Text style={estilos.criterio}>{criterio}</Text>
-              </View>
-            ))}
+    <Tela>
+      <View style={estilos.acoes}>
+        <Botao titulo="Cadastrar pasto" onPress={() => router.push('/pasto-form')} />
+        <Botao titulo="Tipos de capim" variante="secundario" onPress={() => router.push('/tipos-capim')} />
+      </View>
+      {carregando ? <EstadoTela mensagem="Carregando pastos…" carregando /> : null}
+      {erro ? <EstadoTela mensagem={erro} /> : null}
+      {!carregando && !erro && pastos.length === 0 ? <EstadoTela mensagem="Nenhum pasto cadastrado. Cadastre o primeiro para começar." /> : null}
+      {pastos.map((pasto) => (
+        <Cartao key={pasto.id} style={estilos.cartao}>
+          <View style={estilos.cabecalho}>
+            <View style={estilos.tituloBloco}>
+              <Text style={estilos.titulo}>{pasto.nome}</Text>
+              <Text style={estilos.subtitulo}>{pasto.tipoCapimNome}</Text>
+            </View>
+            <Pressable accessibilityLabel={`Editar ${pasto.nome}`} onPress={() => router.push({ pathname: '/pasto-form', params: { id: String(pasto.id) } })} style={estilos.icone}>
+              <Feather name="edit-2" size={20} color={cores.tinta} />
+            </Pressable>
           </View>
+          <View style={estilos.dados}>
+            <Text style={estilos.dado}>{pasto.areaHectares} ha</Text>
+            <Text style={estilos.dado}>{pasto.alturaAtualCm} cm</Text>
+            <Text style={estilos.dado}>{pasto.coberturaPercentual}% coberto</Text>
+          </View>
+          <Text style={estilos.condicao}>Condição: {ROTULOS_CONDICAO[pasto.condicaoCapim]}</Text>
+          <Botao titulo="Excluir" variante="perigo" onPress={() => excluir(pasto)} />
         </Cartao>
-      }
-      requisitos={[
-        'RF-15  Cadastro de pastos e classificação de qualidade',
-        'RF-16  Altura, condição do capim e cobertura do solo',
-        'RF-17  Movimentação de animais e lotes entre pastos',
-        'RF-18  Ocupação, tempo de permanência e descanso',
-      ]}
-    />
+      ))}
+    </Tela>
   );
 }
 
 const estilos = StyleSheet.create({
-  titulo: {
-    ...tipografia.caption,
-    color: cores.cinzaMedio,
-    textTransform: 'uppercase',
-    marginBottom: espaco.lg,
-  },
-  lista: {
-    gap: espaco.md,
-  },
-  linha: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: espaco.md,
-  },
-  /** Largura fixa nos badges para os critérios alinharem numa coluna só. */
-  coluna: {
-    width: 88,
-  },
-  criterio: {
-    ...tipografia.body,
-    color: cores.cinzaMedio,
-    flex: 1,
-  },
+  acoes: { gap: espaco.sm }, cartao: { gap: espaco.lg },
+  cabecalho: { flexDirection: 'row', alignItems: 'flex-start', gap: espaco.md },
+  tituloBloco: { flex: 1, gap: espaco.xs }, titulo: { ...tipografia.subheading, color: cores.tinta },
+  subtitulo: { ...tipografia.body, color: cores.cinzaMedio },
+  icone: { minWidth: toque.alvoMinimo, minHeight: toque.alvoMinimo, alignItems: 'center', justifyContent: 'center' },
+  dados: { flexDirection: 'row', flexWrap: 'wrap', gap: espaco.sm },
+  dado: { ...tipografia.bodyMedia, color: cores.tinta, backgroundColor: cores.neutro, paddingHorizontal: espaco.md, paddingVertical: espaco.sm },
+  condicao: { ...tipografia.body, color: cores.cinzaMedio },
 });
