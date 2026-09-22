@@ -3,10 +3,8 @@
 Aplicativo Android de gestão de rebanho bovino, offline. Este diretório contém
 a base do front-end: **tela inicial, navegação e padrão visual**.
 
-> **Estado:** a tela inicial está funcional. Os cinco módulos (Gado, Pastos,
-> Vendas, Gastos, Relatórios) existem como telas de destino e listam os
-> requisitos que cada um vai atender — a navegação inteira já é testável, mas
-> nenhum módulo foi construído.
+> **Estado:** a fundação offline com SQLite e os módulos de Pastos e Gastos
+> estão funcionais. Gado, Vendas e Relatórios ainda são telas de destino.
 
 ---
 
@@ -47,9 +45,9 @@ frontend/
 │   ├── _layout.tsx           # Navegação raiz, carregamento da fonte, tema do cabeçalho
 │   ├── index.tsx             # TELA INICIAL — atalhos (RNF-08) e resumo
 │   ├── gado.tsx              # ─┐
-│   ├── pastos.tsx            #  │ destinos dos atalhos;
+│   ├── pastos.tsx            # CRUD de pastos
 │   ├── vendas.tsx            #  │ placeholders com os RFs de cada módulo
-│   ├── gastos.tsx            #  │
+│   ├── gastos.tsx            # CRUD de gastos
 │   └── relatorios.tsx        # ─┘
 └── src/
     ├── theme/tokens.ts       # ← FONTE ÚNICA do padrão visual
@@ -62,9 +60,9 @@ frontend/
     │   ├── Badge.tsx         # Tag neutra (sólido / suave / contorno)
     │   ├── BadgeQualidade.tsx    # Qualidade do pasto — RF-15.2
     │   └── EmBreve.tsx       # Placeholder de módulo
-    └── lib/
-        ├── formato.ts        # Moeda e data pt-BR — RNF-18
-        └── dadosExemplo.ts   # ⚠️ PROVISÓRIO — apagar quando o banco entrar
+    ├── data/sqlite/          # migrations e repositórios locais
+    ├── features/             # domínio e casos de uso por módulo
+    └── lib/formato.ts        # Moeda e data pt-BR — RNF-18
 ```
 
 ---
@@ -194,15 +192,14 @@ Não é enfeite aqui — é requisito de uso real no campo.
 | RNF-17 | Todos os textos em português brasileiro |
 | RNF-18 | `src/lib/formato.ts` — `R$ 1.234,50` e `15/09/2026` |
 | RNF-14 | Componentes com responsabilidade única e tokens centralizados |
-| RF-36 | Data do último backup visível na tela inicial |
 | RF-15.2 | `BadgeQualidade` — os três níveis, visíveis na tela de Pastos |
+| RF-15/16 | CRUD de pastos e tipos de capim com validações de ha, cm e % |
+| RF-22/23 | CRUD de gastos, categorias e subcategorias persistido no SQLite |
+| RF-31/32/33 | Operação offline e persistência local com migrations versionadas |
 
 **RNF-18 não usa `Intl`.** O suporte a locale do Hermes varia entre builds do
 Android, e aqui o formato pt-BR é requisito, não preferência do aparelho — então
 a formatação é manual e determinística.
-
-**RF-36 está na tela inicial de propósito.** Como o app não envia notificações
-(RF-14), o estado do backup precisa estar visível para o usuário não esquecer.
 
 ---
 
@@ -218,14 +215,11 @@ a formatação é manual e determinística.
 
 ### Precisa de código
 
-2. **`minSdkVersion`.** O padrão do Expo SDK 57 é API 24 (Android 7); RNF-02
-   pede Android 10 (API 29). Ajustar com `expo-build-properties` antes de gerar
-   o build nativo.
-3. **`src/lib/dadosExemplo.ts` é fictício.** Os números da tela inicial são
-   inventados. Apagar o arquivo quando a camada de dados entrar e trocar as
-   leituras de `resumoFazenda` pela consulta ao banco.
-4. **Módulos.** Os cinco destinos são placeholders. A tela real substitui o
-   `<EmBreve>` sem mexer na tela inicial.
+2. **Módulos restantes.** Gado, Vendas e Relatórios ainda são placeholders. A
+   tela real substitui o `<EmBreve>` sem mexer na tela inicial.
+3. **Resumo e backup.** Os indicadores da tela inicial devem voltar somente
+   quando as respectivas consultas e o backup real estiverem implementados;
+   não usar números ou datas fictícios.
 
 ---
 

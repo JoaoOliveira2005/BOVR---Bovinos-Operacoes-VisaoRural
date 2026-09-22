@@ -14,8 +14,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "br.com.bovr.app",
-      "edgeToEdgeEnabled": true
+      "package": "br.com.bovr.app"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -23,9 +22,26 @@
       "output": "single"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "headers": {
+            "Cross-Origin-Embedder-Policy": "credentialless",
+            "Cross-Origin-Opener-Policy": "same-origin"
+          }
+        }
+      ],
       "expo-font",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-sqlite",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 29
+          }
+        }
+      ]
     ],
     "scheme": "bovr",
     "backgroundColor": "#F5F7F4"
