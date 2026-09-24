@@ -51,12 +51,12 @@ export default function LayoutRaiz() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <SQLiteProvider databaseName="bovr.db" onInit={inicializarBanco}>
         <Stack
           screenOptions={{
-          // Mesmo tom do chao: com o canvas verde, um cabecalho branco criava
-          // uma emenda visivel na altura da barra de status.
+          // Mesmo tom do chao, para o cabecalho nao criar uma emenda visivel
+          // na altura da barra de status.
           headerStyle: { backgroundColor: cores.canvas },
           headerTintColor: cores.tinta,
           headerTitleStyle: {

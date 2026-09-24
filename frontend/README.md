@@ -161,8 +161,8 @@ serem "corrigidos" por engano depois.
 | 2 | **Alvo de toque 48px**, não 36–40px | O DESIGN.md mede para ponteiro de mouse. Este app é usado no celular, no campo, às vezes com luva. 48dp é o mínimo do Material Design. A geometria do sistema (raio 18px, tipo 14px/500) foi mantida — os 48px vêm de padding |
 | 3 | **Sombra de uma camada**, não três | Android não suporta sombra composta, só `elevation`. A aresta do cartão vem da borda de 1px — que o próprio DESIGN.md já exige |
 | 4 | **`display` (48px) não é usado** | É tamanho de headline web; a 360px ele quebra. O maior passo em uso é 36px (`headingLg`). A escala completa fica definida por fidelidade |
-| 5 | **Chão verde** (`#EDF4EE`), não cinza | Decisão do time: o branco puro deixava o app sem temperatura |
-| 6 | **`cinzaMedio` = `#6E6E6E`**, não `#737373` | Sobre o chão verde, o `#737373` caía para 4,24:1 e perdia o AA. Agora dá 4,56:1 no verde e 5,10:1 no papel. O DESIGN.md proíbe **clarear** além de `#737373`; escurecer está dentro da regra |
+| 5 | **Tema escuro** (`#0E1410`), e o DESIGN.md especifica `Theme: light` | Decisão do time. A inversão é completa: nenhum token ficou com valor do tema claro, e o quase-preto puxa para o verde para manter a temperatura de pasto |
+| 6 | **`cinzaMedio` = `#94A297`** e **`ember` = `#FF6B6B`** | No escuro os tons do DESIGN.md invertem de papel. O `#E7000B` original cai para 3,60:1 sobre o papel escuro e perde o AA para texto; o `#FF6B6B` dá 6,19:1 |
 | 7 | **`letterSpacing` 0,2px** nos rótulos de indicador | O 0,6px do DESIGN.md é de caption em tela larga; somado nas três colunas a 360px, custa a largura que faz o rótulo quebrar |
 
 ---
@@ -232,7 +232,11 @@ a formatação é manual e determinística.
 
 3. **Módulos restantes.** Vendas e Relatórios ainda são placeholders. A tela
    real substitui o `<EmBreve>` sem mexer na tela inicial.
-4. **Resumo e backup.** Os indicadores da tela inicial devem voltar somente
+4. **`BadgeQualidade` está órfão.** O componente existe e a paleta de qualidade
+   também, mas o RF-15.2 não está implementado: não há cálculo de
+   boa/regular/ruim em `features/pastures/` nem exibição em `app/pastos.tsx`.
+   Quem pegar o RF-15.2 tem o componente pronto para usar.
+5. **Resumo e backup.** Os indicadores da tela inicial devem voltar somente
    quando as respectivas consultas e o backup real estiverem implementados;
    não usar números ou datas fictícios.
 
