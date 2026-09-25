@@ -25,10 +25,16 @@ export const cores = {
    * time, e a inversao e completa: nenhum token ficou com valor do tema claro.
    */
   canvas: '#0E1410',
-  /** Nivel 2 — cartoes e popovers. No escuro o cartao e mais CLARO que o chao. */
-  paper: '#161D18',
-  /** Nivel 1 — estado pressionado sobre o papel, um degrau acima dele. */
-  superficieAlt: '#1F2721',
+  /**
+   * Nivel 2 — cartoes e popovers. No escuro o cartao e mais CLARO que o chao.
+   *
+   * O primeiro valor do tema escuro era #161D18, so 1.086 de degrau sobre o
+   * chao — abaixo de ~1.20 duas superficies leem como a mesma camada, e os
+   * atalhos da tela inicial sumiam no fundo. Aqui o degrau e 1.259.
+   */
+  paper: '#202A24',
+  /** Nivel 3 — estado pressionado sobre o papel, um degrau acima dele. */
+  superficieAlt: '#2E3B33',
 
   /**
    * Preenchimento neutro de badge, input e botao secundario.
@@ -37,7 +43,7 @@ export const cores = {
    * mesmo token faria o badge neutro se confundir com o chao e competir com o
    * "Boa" da qualidade do pasto (RF-15.2).
    */
-  neutro: '#1F2721',
+  neutro: '#2E3B33',
 
   /** Texto primario, titulos, tracos de icone. */
   tinta: '#EDF4EE',
@@ -55,8 +61,13 @@ export const cores = {
    * 6.99:1 sobre o chao e 6.44:1 sobre o papel — folga confortavel sobre o AA.
    */
   cinzaMedio: '#94A297',
-  /** Bordas, contorno de input, aresta de cartao, contorno de badge. */
-  fio: '#303D34',
+  /**
+   * Bordas, contorno de input, aresta de cartao, contorno de badge.
+   *
+   * No escuro a borda trabalha mais que no claro: o degrau entre superficies e
+   * pequeno por natureza, entao e o fio que desenha a aresta do cartao.
+   */
+  fio: '#44564A',
   /** Texto sobre o botao preenchido claro. */
   tintaInversa: '#0E1410',
 
@@ -82,9 +93,9 @@ export const cores = {
 export const paleta = {
   /** RF-15.2 — classificacao de qualidade do pasto. */
   qualidade: {
-    boa: { base: '#4ADE80', forte: '#86EFAC', suave: '#14301F' },
-    regular: { base: '#FBBF24', forte: '#FCD34D', suave: '#35280C' },
-    ruim: { base: '#FF6B6B', forte: '#FCA5A5', suave: '#3A1618' },
+    boa: { base: '#4ADE80', forte: '#86EFAC', suave: '#1B3D28' },
+    regular: { base: '#FBBF24', forte: '#FCD34D', suave: '#42320F' },
+    ruim: { base: '#FF6B6B', forte: '#FCA5A5', suave: '#4E2124' },
   },
 
   /**
@@ -93,11 +104,11 @@ export const paleta = {
    * tela inicial ganha reconhecimento sem virar um mosaico.
    */
   modulo: {
-    gado: { base: '#E0A44A', suave: '#3A2E15' },
-    pastos: { base: '#5FD08A', suave: '#14301F' },
-    vendas: { base: '#7DA9F5', suave: '#17233B' },
-    gastos: { base: '#F2809C', suave: '#3A1B26' },
-    relatorios: { base: '#B08CF0', suave: '#271C3D' },
+    gado: { base: '#E0A44A', suave: '#4A3A18' },
+    pastos: { base: '#5FD08A', suave: '#1B3D28' },
+    vendas: { base: '#7DA9F5', suave: '#26375E' },
+    gastos: { base: '#F2809C', suave: '#542A38' },
+    relatorios: { base: '#B08CF0', suave: '#3B2D5C' },
   },
 
   /** RF-25 — sinal do resultado financeiro. */
