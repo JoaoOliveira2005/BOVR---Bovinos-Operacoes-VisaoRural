@@ -161,8 +161,8 @@ serem "corrigidos" por engano depois.
 | 2 | **Alvo de toque 48px**, não 36–40px | O DESIGN.md mede para ponteiro de mouse. Este app é usado no celular, no campo, às vezes com luva. 48dp é o mínimo do Material Design. A geometria do sistema (raio 18px, tipo 14px/500) foi mantida — os 48px vêm de padding |
 | 3 | **Sombra de uma camada**, não três | Android não suporta sombra composta, só `elevation`. A aresta do cartão vem da borda de 1px — que o próprio DESIGN.md já exige |
 | 4 | **`display` (48px) não é usado** | É tamanho de headline web; a 360px ele quebra. O maior passo em uso é 36px (`headingLg`). A escala completa fica definida por fidelidade |
-| 5 | **Chão verde** (`#EDF4EE`), não cinza | Decisão do time: o branco puro deixava o app sem temperatura |
-| 6 | **`cinzaMedio` = `#6E6E6E`**, não `#737373` | Sobre o chão verde, o `#737373` caía para 4,24:1 e perdia o AA. Agora dá 4,56:1 no verde e 5,10:1 no papel. O DESIGN.md proíbe **clarear** além de `#737373`; escurecer está dentro da regra |
+| 5 | **Tema escuro** (`#0E1410`), e o DESIGN.md especifica `Theme: light` | Decisão do time. A inversão é completa: nenhum token ficou com valor do tema claro, e o quase-preto puxa para o verde para manter a temperatura de pasto |
+| 6 | **`cinzaMedio` = `#94A297`** e **`ember` = `#FF6B6B`** | No escuro os tons do DESIGN.md invertem de papel. O `#E7000B` original cai para 3,60:1 sobre o papel escuro e perde o AA para texto; o `#FF6B6B` dá 6,19:1 |
 | 7 | **`letterSpacing` 0,2px** nos rótulos de indicador | O 0,6px do DESIGN.md é de caption em tela larga; somado nas três colunas a 360px, custa a largura que faz o rótulo quebrar |
 
 ---
@@ -207,17 +207,36 @@ a formatação é manual e determinística.
 
 ### Precisa de decisão
 
-1. **P-07 conflita com RF-21.** O atalho de Vendas diz "Vendas realizadas e
-   vendas planejadas", seguindo RF-21. Mas P-07 respondeu que "será considerado
-   apenas vendas realizadas". Ou RF-21 sai do escopo, ou P-07 responde outra
-   coisa. Decisão do patrocinador. Quando resolver, é uma linha em
-   `app/index.tsx`.
+1. ~~**P-07 conflita com RF-21.**~~ **Resolvido.** O `docs/Arquitetura.md`
+   registra a decisão do gerente: somente vendas realizadas, RF-21 / B-18
+   desconsiderados até a próxima reunião. O atalho da tela inicial já foi
+   ajustado.
 
 ### Precisa de código
 
-2. **Módulos restantes.** Gado, Vendas e Relatórios ainda são placeholders. A
-   tela real substitui o `<EmBreve>` sem mexer na tela inicial.
-3. **Resumo e backup.** Os indicadores da tela inicial devem voltar somente
+2. **O módulo de Gado ainda não persiste.** A tabela `cattle` não existe no
+   schema — `database.ts` está na versão 1, com pastos e gastos. Criá-la é a
+   Issue #3. Até lá, `src/data/memoria/cattleRepository.ts` guarda os animais
+   em memória e **os dados somem quando o app fecha**.
+
+   O ponto de troca é um arquivo só: `src/data/memoria/cattleServices.ts`.
+   Quando o repositório SQLite existir, vira `src/data/sqlite/cattleServices.ts`
+   no mesmo formato do de pastos, e **nenhuma tela muda** — elas importam
+   apenas `useServicoAnimais`.
+
+   O contrato a implementar é `RepositorioAnimais`, em
+   `src/features/cattle/types.ts`. Atenção ao `existeAtivoComBrinco`: o brinco
+   é único **só entre animais ativos** (RF-01.1 × RF-06.1, pois vendidos e
+   mortos permanecem no histórico com o mesmo número). No SQLite isso é um
+   índice único **parcial**, não um `UNIQUE` de coluna.
+
+3. **Módulos restantes.** Vendas e Relatórios ainda são placeholders. A tela
+   real substitui o `<EmBreve>` sem mexer na tela inicial.
+4. **`BadgeQualidade` está órfão.** O componente existe e a paleta de qualidade
+   também, mas o RF-15.2 não está implementado: não há cálculo de
+   boa/regular/ruim em `features/pastures/` nem exibição em `app/pastos.tsx`.
+   Quem pegar o RF-15.2 tem o componente pronto para usar.
+5. **Resumo e backup.** Os indicadores da tela inicial devem voltar somente
    quando as respectivas consultas e o backup real estiverem implementados;
    não usar números ou datas fictícios.
 

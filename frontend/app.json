@@ -5,10 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0E1410",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -44,6 +44,10 @@
       ]
     ],
     "scheme": "bovr",
-    "backgroundColor": "#F5F7F4"
+    "backgroundColor": "#0E1410",
+    "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#0E1410"
+    }
   }
 }

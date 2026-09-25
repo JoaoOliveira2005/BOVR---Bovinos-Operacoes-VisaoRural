@@ -51,12 +51,12 @@ export default function LayoutRaiz() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <SQLiteProvider databaseName="bovr.db" onInit={inicializarBanco}>
         <Stack
           screenOptions={{
-          // Mesmo tom do chao: com o canvas verde, um cabecalho branco criava
-          // uma emenda visivel na altura da barra de status.
+          // Mesmo tom do chao, para o cabecalho nao criar uma emenda visivel
+          // na altura da barra de status.
           headerStyle: { backgroundColor: cores.canvas },
           headerTintColor: cores.tinta,
           headerTitleStyle: {
@@ -70,6 +70,7 @@ export default function LayoutRaiz() {
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="gado" options={{ title: 'Gado' }} />
+          <Stack.Screen name="animal-form" options={{ title: 'Cadastro de animal' }} />
           <Stack.Screen name="pastos" options={{ title: 'Pastos' }} />
           <Stack.Screen name="pasto-form" options={{ title: 'Cadastro de pasto' }} />
           <Stack.Screen name="tipos-capim" options={{ title: 'Tipos de capim' }} />
