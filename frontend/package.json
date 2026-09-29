@@ -42,7 +42,10 @@
     "preset": "jest-expo",
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/app/"
+      "<rootDir>/app/"
+    ],
+    "modulePaths": [
+      "<rootDir>/node_modules"
     ]
   },
   "private": true

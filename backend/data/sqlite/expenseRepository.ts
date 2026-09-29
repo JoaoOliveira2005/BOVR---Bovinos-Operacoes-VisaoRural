@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { ErroDominio } from '../../domain/errors';
+import { ErroDominio } from '../../../frontend/src/domain/errors';
 import type {
   CategoriaGasto,
   EntradaGasto,
@@ -8,7 +8,7 @@ import type {
   RepositorioCategoriasGasto,
   RepositorioGastos,
   SubcategoriaGasto,
-} from '../../features/expenses/types';
+} from '../../../frontend/src/features/expenses/types';
 import { converterErroSqlite } from './errors';
 
 type LinhaGasto = {

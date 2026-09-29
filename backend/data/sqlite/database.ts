@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const VERSAO_BANCO = 1;
+const VERSAO_BANCO = 2;
 
 const MIGRACAO_1 = `
 CREATE TABLE IF NOT EXISTS grass_types (
@@ -70,6 +70,32 @@ INSERT OR IGNORE INTO expense_categories (name, is_system) VALUES ('Mão de obra
 INSERT OR IGNORE INTO expense_categories (name, is_system) VALUES ('Infraestrutura', 1);
 `;
 
+// O índice parcial permite reutilizar brincos de animais fora do rebanho ativo.
+const MIGRACAO_2 = `
+CREATE TABLE IF NOT EXISTS cattle (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ear_tag TEXT NOT NULL COLLATE NOCASE CHECK (length(trim(ear_tag)) > 0),
+  sex TEXT NOT NULL CHECK (sex IN ('macho', 'femea')),
+  birth_date TEXT,
+  estimated_age_months INTEGER CHECK (
+    estimated_age_months IS NULL OR
+    (typeof(estimated_age_months) = 'integer' AND estimated_age_months BETWEEN 0 AND 360)
+  ),
+  breed TEXT NOT NULL CHECK (length(trim(breed)) > 0),
+  notes TEXT,
+  status TEXT NOT NULL DEFAULT 'ativo'
+    CHECK (status IN ('ativo', 'vendido', 'morto', 'transferido')),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK ((birth_date IS NOT NULL AND estimated_age_months IS NULL) OR
+         (birth_date IS NULL AND estimated_age_months IS NOT NULL))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cattle_active_ear_tag
+  ON cattle(trim(ear_tag) COLLATE NOCASE) WHERE status = 'ativo';
+CREATE INDEX IF NOT EXISTS idx_cattle_ear_tag
+  ON cattle(trim(ear_tag) COLLATE NOCASE);
+`;
+
 export async function inicializarBanco(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   await db.execAsync('PRAGMA foreign_keys = ON;');
@@ -81,6 +107,7 @@ export async function inicializarBanco(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('BEGIN IMMEDIATE;');
   try {
     if (atual < 1) await db.execAsync(MIGRACAO_1);
+    if (atual < 2) await db.execAsync(MIGRACAO_2);
     await db.execAsync(`PRAGMA user_version = ${VERSAO_BANCO};`);
     await db.execAsync('COMMIT;');
   } catch (erro) {

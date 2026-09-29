@@ -7,7 +7,7 @@ import { Botao } from '../src/components/Botao';
 import { Cartao } from '../src/components/Cartao';
 import { EstadoTela } from '../src/components/EstadoTela';
 import { Tela } from '../src/components/Tela';
-import { useServicoPastos } from '../src/data/sqlite/pastureServices';
+import { useServicoPastos } from '../../backend/data/sqlite/pastureServices';
 import { mensagemErro } from '../src/domain/errors';
 import type { Pasto } from '../src/features/pastures/types';
 import { cores, espaco, tipografia, toque } from '../src/theme/tokens';

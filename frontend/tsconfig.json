@@ -2,6 +2,21 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "types": ["jest"]
-  }
+    "types": [
+      "jest"
+    ],
+    "paths": {
+      "expo-sqlite": [
+        "./node_modules/expo-sqlite"
+      ]
+    },
+    "typeRoots": [
+      "./node_modules/@types"
+    ]
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "../backend/**/*.ts"
+  ]
 }

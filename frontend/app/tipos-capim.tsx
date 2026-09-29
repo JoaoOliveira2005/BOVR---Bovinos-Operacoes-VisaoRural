@@ -2,7 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Botao } from '../src/components/Botao'; import { Campo } from '../src/components/Campo'; import { Cartao } from '../src/components/Cartao'; import { EstadoTela } from '../src/components/EstadoTela'; import { Tela } from '../src/components/Tela';
-import { useServicoPastos } from '../src/data/sqlite/pastureServices'; import { mensagemErro } from '../src/domain/errors'; import type { TipoCapim } from '../src/features/pastures/types'; import { cores, espaco, tipografia } from '../src/theme/tokens';
+import { useServicoPastos } from '../../backend/data/sqlite/pastureServices'; import { mensagemErro } from '../src/domain/errors'; import type { TipoCapim } from '../src/features/pastures/types'; import { cores, espaco, tipografia } from '../src/theme/tokens';
 const converter = (valor: string) => Number(valor.trim().replace(',', '.'));
 export default function TelaTiposCapim() {
   const servico = useServicoPastos(); const [tipos, setTipos] = useState<TipoCapim[]>([]); const [editando, setEditando] = useState<number>();

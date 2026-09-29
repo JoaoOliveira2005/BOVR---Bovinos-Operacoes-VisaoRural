@@ -11,7 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { inicializarBanco } from '../src/data/sqlite/database';
+import { inicializarBanco } from '../../backend/data/sqlite/database';
 import { cores, fonte, tipografia } from '../src/theme/tokens';
 
 // Segura a splash ate a Geist estar pronta, senao a primeira renderizacao sai

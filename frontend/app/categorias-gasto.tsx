@@ -8,7 +8,7 @@ import { Cartao } from '../src/components/Cartao';
 import { EstadoTela } from '../src/components/EstadoTela';
 import { Seletor } from '../src/components/Seletor';
 import { Tela } from '../src/components/Tela';
-import { useServicoGastos } from '../src/data/sqlite/expenseServices';
+import { useServicoGastos } from '../../backend/data/sqlite/expenseServices';
 import { mensagemErro } from '../src/domain/errors';
 import type { CategoriaGasto, SubcategoriaGasto } from '../src/features/expenses/types';
 import { cores, espaco, tipografia } from '../src/theme/tokens';

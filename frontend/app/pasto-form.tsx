@@ -7,7 +7,7 @@ import { Campo } from '../src/components/Campo';
 import { EstadoTela } from '../src/components/EstadoTela';
 import { Seletor } from '../src/components/Seletor';
 import { Tela } from '../src/components/Tela';
-import { useServicoPastos } from '../src/data/sqlite/pastureServices';
+import { useServicoPastos } from '../../backend/data/sqlite/pastureServices';
 import { mensagemErro } from '../src/domain/errors';
 import type { CondicaoCapim, TipoCapim } from '../src/features/pastures/types';
 import { cores, espaco, tipografia } from '../src/theme/tokens';

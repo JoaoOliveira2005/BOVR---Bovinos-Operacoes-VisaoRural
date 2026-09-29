@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { ErroDominio } from '../../domain/errors';
+import { ErroDominio } from '../../../frontend/src/domain/errors';
 import type {
   EntradaPasto,
   EntradaTipoCapim,
@@ -8,7 +8,7 @@ import type {
   RepositorioPastos,
   RepositorioTiposCapim,
   TipoCapim,
-} from '../../features/pastures/types';
+} from '../../../frontend/src/features/pastures/types';
 import { converterErroSqlite } from './errors';
 
 type LinhaTipo = { id: number; name: string; min_height_cm: number; max_height_cm: number };

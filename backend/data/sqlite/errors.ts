@@ -1,4 +1,4 @@
-import { ErroDominio } from '../../domain/errors';
+import { ErroDominio } from '../../../frontend/src/domain/errors';
 
 export function converterErroSqlite(erro: unknown, contexto: string): never {
   const mensagem = erro instanceof Error ? erro.message : String(erro);

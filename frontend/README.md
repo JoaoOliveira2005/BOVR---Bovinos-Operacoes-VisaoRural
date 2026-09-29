@@ -60,12 +60,15 @@ frontend/
     │   ├── Badge.tsx         # Tag neutra (sólido / suave / contorno)
     │   ├── BadgeQualidade.tsx    # Qualidade do pasto — RF-15.2
     │   └── EmBreve.tsx       # Placeholder de módulo
-    ├── data/sqlite/          # migrations e repositórios locais
     ├── features/             # domínio e casos de uso por módulo
     └── lib/formato.ts        # Moeda e data pt-BR — RNF-18
 ```
 
 ---
+
+A camada de dados SQLite fica em [`../backend/data/sqlite/`](../backend/data/sqlite/).
+Metro e TypeScript incluem essa pasta externa. O cadastro e a consulta de animais
+estão disponíveis no backend; a integração das telas fica com o squad de frontend.
 
 ## Padrão visual
 

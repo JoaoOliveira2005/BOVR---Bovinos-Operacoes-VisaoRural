@@ -1,7 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useMemo } from 'react';
 
-import { ServicoGastos } from '../../features/expenses/service';
+import { ServicoGastos } from '../../../frontend/src/features/expenses/service';
 import { RepositorioCategoriasGastoSqlite, RepositorioGastosSqlite } from './expenseRepository';
 
 export function useServicoGastos(): ServicoGastos {

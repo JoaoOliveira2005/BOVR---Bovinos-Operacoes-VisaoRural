@@ -1,0 +1,12 @@
+.git
+.agents
+.codex
+**/node_modules
+**/.expo
+**/dist
+**/web-build
+**/coverage
+**/.env*
+**/npm-debug.log*
+frontend/android
+frontend/ios
