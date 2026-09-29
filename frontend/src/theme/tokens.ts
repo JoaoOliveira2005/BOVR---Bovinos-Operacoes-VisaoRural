@@ -19,48 +19,59 @@ export const cores = {
   /**
    * Nivel 0 — fundo da pagina.
    *
-   * Verde muito claro em vez do cinza do DESIGN.md: o branco puro deixava o
-   * app sem temperatura. E so o chao — cartao, cabecalho e conteudo seguem em
-   * papel branco por cima, entao o contraste de camada nao muda.
+   * Quase-preto com vies verde, nao cinza neutro: o verde de pasto que o app
+   * tinha no tema claro continua presente, so que agora como temperatura do
+   * escuro. O DESIGN.md especifica "Theme: light" — inverter foi decisao do
+   * time, e a inversao e completa: nenhum token ficou com valor do tema claro.
    */
-  canvas: '#EDF4EE',
-  /** Nivel 2 — cartoes, popovers, botao primario claro. */
-  paper: '#FFFFFF',
-  /** Nivel 1 — variante sutil de cartao, estado pressionado sobre papel. */
-  superficieAlt: '#FAFAFA',
+  canvas: '#0E1410',
+  /**
+   * Nivel 2 — cartoes e popovers. No escuro o cartao e mais CLARO que o chao.
+   *
+   * O primeiro valor do tema escuro era #161D18, so 1.086 de degrau sobre o
+   * chao — abaixo de ~1.20 duas superficies leem como a mesma camada, e os
+   * atalhos da tela inicial sumiam no fundo. Aqui o degrau e 1.259.
+   */
+  paper: '#202A24',
+  /** Nivel 3 — estado pressionado sobre o papel, um degrau acima dele. */
+  superficieAlt: '#2E3B33',
 
   /**
    * Preenchimento neutro de badge, input e botao secundario.
    *
-   * Existe separado de `canvas` de proposito: com o chao verde, usar o mesmo
-   * token faria o badge neutro sair esverdeado e competir com o "Boa" da
-   * qualidade do pasto (RF-15.2). Preenchimento neutro tem que continuar cinza.
+   * Continua separado de `canvas` pelo mesmo motivo do tema claro: usar o
+   * mesmo token faria o badge neutro se confundir com o chao e competir com o
+   * "Boa" da qualidade do pasto (RF-15.2).
    */
-  neutro: '#F5F5F5',
+  neutro: '#2E3B33',
 
   /** Texto primario, titulos, tracos de icone. */
-  tinta: '#0A0A0A',
-  /** Fundo de botao preenchido, texto secundario sobre superficie clara. */
-  tintaSuave: '#171717',
+  tinta: '#EDF4EE',
+  /**
+   * Fundo do botao preenchido e do chip selecionado.
+   *
+   * O DESIGN.md chama a inversao escuro-sobre-claro de "the only chromatic
+   * interaction in the system". No tema escuro ela vira claro-sobre-escuro:
+   * este token clareia e `tintaInversa` escurece, mantendo a mesma ideia.
+   */
+  tintaSuave: '#EDF4EE',
   /**
    * Texto de apoio, placeholder, rotulos auxiliares, icone em repouso.
    *
-   * Um passo mais escuro que o #737373 do DESIGN.md: sobre o chao verde aquele
-   * tom caia para 4.24:1 e perdia o AA. Aqui fica 4.56:1 no verde e 5.10:1 no
-   * papel. O DESIGN.md proibe clarear alem de #737373 — escurecer esta dentro.
+   * 6.99:1 sobre o chao e 6.44:1 sobre o papel — folga confortavel sobre o AA.
    */
-  cinzaMedio: '#6E6E6E',
-  /** Bordas, contorno de input, aresta de cartao, contorno de badge. */
-  fio: '#E5E5E5',
-  /** Texto sobre superficie escura (botao preenchido, badge solido). */
-  tintaInversa: '#FAFAFA',
-
+  cinzaMedio: '#94A297',
   /**
-   * Unico tom cromatico do sistema. O DESIGN.md reserva-o para acoes
-   * destrutivas e estados de erro — "it never decorates". Nao usar para
-   * enfase, marca ou categoria.
+   * Bordas, contorno de input, aresta de cartao, contorno de badge.
+   *
+   * No escuro a borda trabalha mais que no claro: o degrau entre superficies e
+   * pequeno por natureza, entao e o fio que desenha a aresta do cartao.
    */
-  ember: '#E7000B',
+  fio: '#44564A',
+  /** Texto sobre o botao preenchido claro. */
+  tintaInversa: '#0E1410',
+
+  ember: '#FF6B6B',
 } as const;
 
 /**
@@ -82,9 +93,9 @@ export const cores = {
 export const paleta = {
   /** RF-15.2 — classificacao de qualidade do pasto. */
   qualidade: {
-    boa: { base: '#15803D', forte: '#14532D', suave: '#DCFCE7' },
-    regular: { base: '#B45309', forte: '#78350F', suave: '#FEF3C7' },
-    ruim: { base: '#E7000B', forte: '#9F0007', suave: '#FFE4E6' },
+    boa: { base: '#4ADE80', forte: '#86EFAC', suave: '#1B3D28' },
+    regular: { base: '#FBBF24', forte: '#FCD34D', suave: '#42320F' },
+    ruim: { base: '#FF6B6B', forte: '#FCA5A5', suave: '#4E2124' },
   },
 
   /**
@@ -93,17 +104,17 @@ export const paleta = {
    * tela inicial ganha reconhecimento sem virar um mosaico.
    */
   modulo: {
-    gado: { base: '#B45309', suave: '#FEF3C7' },
-    pastos: { base: '#15803D', suave: '#DCFCE7' },
-    vendas: { base: '#1D4ED8', suave: '#DBEAFE' },
-    gastos: { base: '#BE123C', suave: '#FFE4E6' },
-    relatorios: { base: '#6D28D9', suave: '#EDE9FE' },
+    gado: { base: '#E0A44A', suave: '#4A3A18' },
+    pastos: { base: '#5FD08A', suave: '#1B3D28' },
+    vendas: { base: '#7DA9F5', suave: '#26375E' },
+    gastos: { base: '#F2809C', suave: '#542A38' },
+    relatorios: { base: '#B08CF0', suave: '#3B2D5C' },
   },
 
   /** RF-25 — sinal do resultado financeiro. */
   resultado: {
-    positivo: '#15803D',
-    negativo: '#E7000B',
+    positivo: '#5FD08A',
+    negativo: '#FF6B6B',
   },
 } as const;
 

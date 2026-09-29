@@ -36,7 +36,7 @@ const ATALHOS: Atalho[] = [
   {
     modulo: 'vendas',
     titulo: 'Vendas',
-    descricao: 'Vendas realizadas e vendas planejadas',
+    descricao: 'Registro e histórico de vendas realizadas',
     icone: 'trending-up',
     href: '/vendas',
   },
