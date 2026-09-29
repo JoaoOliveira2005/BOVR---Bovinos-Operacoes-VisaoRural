@@ -1,8 +1,16 @@
 import { Feather } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AtalhoCard } from '../src/components/AtalhoCard';
+import { Cartao } from '../src/components/Cartao';
+import { GrupoIndicadores } from '../src/components/GrupoIndicadores';
+import { Indicador } from '../src/components/Indicador';
+import { useServicoDashboard } from '../src/data/sqlite/dashboardServices';
+import type { ResumoFazenda } from '../src/features/dashboard/types';
+import { moeda } from '../src/lib/formato';
 import { cores, espaco, tipografia, type Modulo } from '../src/theme/tokens';
 
 type Atalho = {
@@ -58,6 +66,26 @@ const ATALHOS: Atalho[] = [
 
 export default function TelaInicial() {
   const insets = useSafeAreaInsets();
+  const servico = useServicoDashboard();
+  const [resumo, setResumo] = useState<ResumoFazenda | null>(null);
+
+  const carregarResumo = useCallback(async () => {
+    try {
+      const dados = await servico.obterResumoFazenda();
+      setResumo(dados);
+    } catch {
+      // Falha silenciosa para não quebrar a tela inicial se o banco estiver ocupado
+    }
+  }, [servico]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void carregarResumo();
+    }, [carregarResumo]),
+  );
+
+  const temDados =
+    resumo && (resumo.pastos.totalPastos > 0 || resumo.gastos.totalGeralCentavos > 0);
 
   return (
     <ScrollView
@@ -74,6 +102,30 @@ export default function TelaInicial() {
         <Text style={estilos.saudacao}>Gestão da fazenda</Text>
         <Text style={estilos.fazenda}>BOVR</Text>
       </View>
+
+      {/* Resumo consolidado dos módulos existentes — RF-18.1 / RF-22 */}
+      {temDados ? (
+        <Cartao style={estilos.cartaoResumo}>
+          <Text style={estilos.secaoTitulo}>Resumo da fazenda</Text>
+          <GrupoIndicadores>
+            <Indicador
+              rotulo="Pastos"
+              valor={String(resumo.pastos.totalPastos)}
+              descricaoAcessivel="pastos cadastrados"
+            />
+            <Indicador
+              rotulo="Área total"
+              valor={`${resumo.pastos.areaTotalHectares} ha`}
+              descricaoAcessivel="hectares cadastrados"
+            />
+            <Indicador
+              rotulo="Gastos no mês"
+              valor={moeda(resumo.gastos.totalMesCentavos / 100)}
+              descricaoAcessivel="gastos neste mês"
+            />
+          </GrupoIndicadores>
+        </Cartao>
+      ) : null}
 
       {/* Atalhos — RNF-08. */}
       <View style={estilos.secao}>
@@ -108,6 +160,9 @@ const estilos = StyleSheet.create({
   fazenda: {
     ...tipografia.heading,
     color: cores.tinta,
+  },
+  cartaoResumo: {
+    gap: espaco.md,
   },
   secao: {
     gap: espaco.md,
