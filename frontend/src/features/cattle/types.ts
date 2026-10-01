@@ -40,4 +40,5 @@ export interface RepositorioAnimais {
   existeAtivoComBrinco(brinco: string, ignorarId?: number): Promise<boolean>;
   criar(entrada: EntradaAnimal): Promise<number>;
   atualizar(id: number, entrada: EntradaAnimal): Promise<void>;
+  excluir(id: number): Promise<void>;
 }

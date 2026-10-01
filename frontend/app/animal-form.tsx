@@ -1,13 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Botao } from '../src/components/Botao';
 import { Campo } from '../src/components/Campo';
 import { EstadoTela } from '../src/components/EstadoTela';
 import { Seletor } from '../src/components/Seletor';
 import { Tela } from '../src/components/Tela';
-import { useServicoAnimais } from '../src/data/memoria/cattleServices';
+import { useServicoAnimais } from '../../backend/data/sqlite/cattleServices';
 import { ErroDominio, mensagemErro } from '../src/domain/errors';
 import { descreverIdade, idadeEmMeses } from '../src/features/cattle/idade';
 import type { EntradaAnimal, SexoAnimal } from '../src/features/cattle/types';
@@ -114,6 +114,34 @@ export default function FormularioAnimal() {
     }
   };
 
+  const excluir = () => {
+    if (!id) return;
+    const executarExclusao = async () => {
+      try {
+        await servico.excluir(id);
+        router.back();
+      } catch (causa) {
+        const mensagem = mensagemErro(causa);
+        if (Platform.OS === 'web') {
+          window.alert(`Não foi possível excluir: ${mensagem}`);
+        } else {
+          Alert.alert('Não foi possível excluir', mensagem);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`O animal brinco “${brinco}” será excluído definitivamente. Confirma?`)) {
+        void executarExclusao();
+      }
+    } else {
+      Alert.alert('Excluir animal?', `O animal brinco “${brinco}” será excluído definitivamente.`, [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => { void executarExclusao(); } },
+      ]);
+    }
+  };
+
   if (carregando) {
     return <Tela><EstadoTela mensagem="Carregando animal…" carregando /></Tela>;
   }
@@ -206,6 +234,7 @@ export default function FormularioAnimal() {
         carregando={salvando}
         onPress={salvar}
       />
+      {id ? <Botao titulo="Excluir animal" variante="perigo" onPress={excluir} /> : null}
       <Botao titulo="Cancelar" variante="secundario" onPress={() => router.back()} />
     </Tela>
   );
