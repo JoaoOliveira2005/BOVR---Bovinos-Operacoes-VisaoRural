@@ -1,14 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Badge } from '../src/components/Badge';
 import { Botao } from '../src/components/Botao';
 import { Cartao } from '../src/components/Cartao';
 import { EstadoTela } from '../src/components/EstadoTela';
 import { Tela } from '../src/components/Tela';
-import { useServicoAnimais } from '../src/data/memoria/cattleServices';
+import { useServicoAnimais } from '../../backend/data/sqlite/cattleServices';
 import { mensagemErro } from '../src/domain/errors';
 import { descreverIdade, idadeDoAnimal } from '../src/features/cattle/idade';
 import type { Animal } from '../src/features/cattle/types';
@@ -44,6 +43,33 @@ export default function TelaGado() {
 
   useFocusEffect(useCallback(() => { void carregar(); }, [carregar]));
 
+  const excluir = (animal: Animal) => {
+    const executarExclusao = async () => {
+      try {
+        await servico.excluir(animal.id);
+        await carregar();
+      } catch (causa) {
+        const mensagem = mensagemErro(causa);
+        if (Platform.OS === 'web') {
+          window.alert(`Não foi possível excluir: ${mensagem}`);
+        } else {
+          Alert.alert('Não foi possível excluir', mensagem);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`O animal brinco “${animal.brinco}” será excluído definitivamente. Confirma?`)) {
+        void executarExclusao();
+      }
+    } else {
+      Alert.alert('Excluir animal?', `O animal brinco “${animal.brinco}” será excluído definitivamente.`, [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => { void executarExclusao(); } },
+      ]);
+    }
+  };
+
   return (
     <Tela>
       {/* RNF-07 + P-11 — o cadastro tem que ser alcançável daqui direto: início
@@ -64,13 +90,12 @@ export default function TelaGado() {
           </Text>
 
           {animais.map((animal) => (
-            <Pressable
-              key={animal.id}
-              accessibilityRole="button"
-              accessibilityLabel={`Brinco ${animal.brinco}, ${ROTULO_SEXO[animal.sexo]}, ${animal.raca}`}
-              onPress={() => router.push({ pathname: '/animal-form', params: { id: String(animal.id) } })}
-            >
-              <Cartao>
+            <Cartao key={animal.id} style={estilos.cartao}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Brinco ${animal.brinco}, ${ROTULO_SEXO[animal.sexo]}, ${animal.raca}`}
+                onPress={() => router.push({ pathname: '/animal-form', params: { id: String(animal.id) } })}
+              >
                 <View style={estilos.linha}>
                   <View style={estilos.dados}>
                     <Text style={estilos.brinco}>Brinco {animal.brinco}</Text>
@@ -78,13 +103,14 @@ export default function TelaGado() {
                       {ROTULO_SEXO[animal.sexo]} · {animal.raca} · {textoIdade(animal)}
                     </Text>
                   </View>
-                  <Feather name="chevron-right" size={18} color={cores.cinzaMedio} />
+                  <Feather name="edit-2" size={18} color={cores.cinzaMedio} />
                 </View>
                 {animal.observacoes ? (
                   <Text style={estilos.observacoes} numberOfLines={2}>{animal.observacoes}</Text>
                 ) : null}
-              </Cartao>
-            </Pressable>
+              </Pressable>
+              <Botao titulo="Excluir" variante="perigo" onPress={() => excluir(animal)} />
+            </Cartao>
           ))}
         </View>
       )}
@@ -94,6 +120,7 @@ export default function TelaGado() {
 
 const estilos = StyleSheet.create({
   lista: { gap: espaco.md },
+  cartao: { gap: espaco.md },
   contagem: {
     ...tipografia.caption,
     color: cores.cinzaMedio,

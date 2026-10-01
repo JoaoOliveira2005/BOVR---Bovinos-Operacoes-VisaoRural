@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Botao } from '../src/components/Botao';
 import { Cartao } from '../src/components/Cartao';
@@ -30,13 +30,32 @@ export default function TelaPastos() {
 
   useFocusEffect(useCallback(() => { void carregar(); }, [carregar]));
 
-  const excluir = (pasto: Pasto) => Alert.alert('Excluir pasto?', `O pasto “${pasto.nome}” será excluído definitivamente.`, [
-    { text: 'Cancelar', style: 'cancel' },
-    { text: 'Excluir', style: 'destructive', onPress: async () => {
-      try { await servico.excluirPasto(pasto.id); await carregar(); }
-      catch (causa) { Alert.alert('Não foi possível excluir', mensagemErro(causa)); }
-    } },
-  ]);
+  const excluir = (pasto: Pasto) => {
+    const executarExclusao = async () => {
+      try {
+        await servico.excluirPasto(pasto.id);
+        await carregar();
+      } catch (causa) {
+        const mensagem = mensagemErro(causa);
+        if (Platform.OS === 'web') {
+          window.alert(`Não foi possível excluir: ${mensagem}`);
+        } else {
+          Alert.alert('Não foi possível excluir', mensagem);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`O pasto “${pasto.nome}” será excluído definitivamente. Confirma?`)) {
+        void executarExclusao();
+      }
+    } else {
+      Alert.alert('Excluir pasto?', `O pasto “${pasto.nome}” será excluído definitivamente.`, [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => { void executarExclusao(); } },
+      ]);
+    }
+  };
 
   return (
     <Tela>

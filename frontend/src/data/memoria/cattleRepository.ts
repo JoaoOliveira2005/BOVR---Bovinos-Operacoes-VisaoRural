@@ -53,4 +53,9 @@ export class RepositorioAnimaisMemoria implements RepositorioAnimais {
     const indice = animais.findIndex((animal) => animal.id === id);
     if (indice >= 0) animais[indice] = { ...animais[indice], ...entrada };
   }
+
+  async excluir(id: number): Promise<void> {
+    const indice = animais.findIndex((animal) => animal.id === id);
+    if (indice >= 0) animais.splice(indice, 1);
+  }
 }

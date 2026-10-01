@@ -166,7 +166,12 @@ export class RepositorioPastosSqlite implements RepositorioPastos {
   }
 
   async excluir(id: number): Promise<void> {
-    const resultado = await this.db.runAsync('DELETE FROM pastures WHERE id = ?', id);
-    if (!resultado.changes) throw new ErroDominio('nao_encontrado', 'Pasto não encontrado.');
+    try {
+      const resultado = await this.db.runAsync('DELETE FROM pastures WHERE id = ?', id);
+      if (!resultado.changes) throw new ErroDominio('nao_encontrado', 'Pasto não encontrado.');
+    } catch (erro) {
+      if (erro instanceof ErroDominio) throw erro;
+      converterErroSqlite(erro, 'Pasto');
+    }
   }
 }
