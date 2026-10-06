@@ -36,6 +36,10 @@ export class ServicoAnimais {
     return id !== undefined ? this.repositorio.atualizar(id, valida) : this.repositorio.criar(valida);
   }
 
+  excluir(id: number) {
+    return this.repositorio.excluir(id);
+  }
+
   /** Retorna o ativo primeiro, seguido pelo histórico; retorna [] se não encontrar. */
   async consultarPorBrinco(brinco: string, hoje = new Date()): Promise<DetalhesAnimal[]> {
     const numero = brinco.trim();

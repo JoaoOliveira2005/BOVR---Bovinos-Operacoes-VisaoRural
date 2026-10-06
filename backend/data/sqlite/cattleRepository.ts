@@ -88,4 +88,11 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
       if (!resultado.changes) throw new ErroDominio('nao_encontrado', 'Animal não encontrado.');
     } catch (erro) { tratarErro(erro); }
   }
+
+  async excluir(id: number): Promise<void> {
+    try {
+      const resultado = await this.db.runAsync('DELETE FROM cattle WHERE id = ?', id);
+      if (!resultado.changes) throw new ErroDominio('nao_encontrado', 'Animal não encontrado.');
+    } catch (erro) { tratarErro(erro); }
+  }
 }

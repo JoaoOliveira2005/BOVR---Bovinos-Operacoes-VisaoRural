@@ -8,29 +8,19 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { inicializarBanco } from '../../backend/data/sqlite/database';
+import { SplashAnimado } from '../src/components/SplashAnimado';
 import { cores, fonte, tipografia } from '../src/theme/tokens';
 
 // Segura a splash ate a Geist estar pronta, senao a primeira renderizacao sai
 // na fonte do sistema e o texto salta de lugar quando a fonte troca.
 SplashScreen.preventAutoHideAsync();
 
-/**
- * Navegacao raiz do BOVR.
- *
- * Padrao escolhido: pilha (stack) com a tela inicial como centro. RNF-08 exige
- * que a tela inicial apresente os atalhos dos cinco modulos, entao ela e o hub
- * — uma barra de abas competiria com esses atalhos e duplicaria a navegacao.
- * P-11 fecha a conta: o cadastro de animal cabe em inicio -> gado -> cadastro,
- * os tres passos do RNF-07 contando a tela inicial como primeiro.
- *
- * O cabecalho segue a estrutura do DESIGN.md — tinta preta, sem sombra, sem
- * barra colorida — sobre o chao verde do app.
- */
 export default function LayoutRaiz() {
+  const [exibirSplash, setExibirSplash] = useState(true);
   const [fontesCarregadas, erroFonte] = useFonts({
     Geist_400Regular,
     Geist_500Medium,
@@ -39,7 +29,7 @@ export default function LayoutRaiz() {
 
   useEffect(() => {
     if (fontesCarregadas || erroFonte) {
-      SplashScreen.hideAsync();
+      void SplashScreen.hideAsync();
     }
   }, [fontesCarregadas, erroFonte]);
 
@@ -52,20 +42,23 @@ export default function LayoutRaiz() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
+      {exibirSplash ? (
+        <SplashAnimado aoConcluir={() => setExibirSplash(false)} />
+      ) : null}
       <SQLiteProvider databaseName="bovr.db" onInit={inicializarBanco}>
         <Stack
           screenOptions={{
-          // Mesmo tom do chao, para o cabecalho nao criar uma emenda visivel
-          // na altura da barra de status.
-          headerStyle: { backgroundColor: cores.canvas },
-          headerTintColor: cores.tinta,
-          headerTitleStyle: {
-            fontFamily: fonte.semibold,
-            fontSize: tipografia.subheading.fontSize,
-          },
-          headerShadowVisible: false,
-          headerBackButtonDisplayMode: 'minimal',
-          contentStyle: { backgroundColor: cores.canvas },
+            // Mesmo tom do chao, para o cabecalho nao criar uma emenda visivel
+            // na altura da barra de status.
+            headerStyle: { backgroundColor: cores.canvas },
+            headerTintColor: cores.tinta,
+            headerTitleStyle: {
+              fontFamily: fonte.semibold,
+              fontSize: tipografia.subheading.fontSize,
+            },
+            headerShadowVisible: false,
+            headerBackButtonDisplayMode: 'minimal',
+            contentStyle: { backgroundColor: cores.canvas },
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
