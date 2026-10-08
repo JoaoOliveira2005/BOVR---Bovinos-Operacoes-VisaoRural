@@ -93,6 +93,10 @@ function repositorioFake(existentes: Animal[] = []): RepositorioAnimais {
       return id;
     },
     atualizar: async () => undefined,
+    excluir: async (id) => {
+      const idx = animais.findIndex((a) => a.id === id);
+      if (idx >= 0) animais.splice(idx, 1);
+    },
   };
 }
 

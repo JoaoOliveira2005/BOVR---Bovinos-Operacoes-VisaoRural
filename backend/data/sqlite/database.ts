@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const VERSAO_BANCO = 2;
+const VERSAO_BANCO = 3;
 
 const MIGRACAO_1 = `
 CREATE TABLE IF NOT EXISTS grass_types (
@@ -96,6 +96,38 @@ CREATE INDEX IF NOT EXISTS idx_cattle_ear_tag
   ON cattle(trim(ear_tag) COLLATE NOCASE);
 `;
 
+const MIGRACAO_3 = `
+CREATE TABLE IF NOT EXISTS sales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  buyer TEXT NOT NULL CHECK (length(trim(buyer)) > 0),
+  sale_date TEXT NOT NULL CHECK (sale_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  gross_value_cents INTEGER NOT NULL CHECK (gross_value_cents > 0),
+  sale_type TEXT NOT NULL DEFAULT 'realizada' CHECK (sale_type IN ('realizada', 'planejada')),
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sale_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sale_id INTEGER NOT NULL,
+  animal_id INTEGER,
+  ear_tag TEXT NOT NULL,
+  weight_kg REAL NOT NULL CHECK (weight_kg > 0),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
+  FOREIGN KEY (animal_id) REFERENCES cattle(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(sale_date DESC);
+CREATE INDEX IF NOT EXISTS idx_sales_type ON sales(sale_type);
+CREATE INDEX IF NOT EXISTS idx_sales_buyer ON sales(buyer COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_animal ON sale_items(animal_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_ear_tag ON sale_items(ear_tag COLLATE NOCASE);
+`;
+
 export async function inicializarBanco(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   await db.execAsync('PRAGMA foreign_keys = ON;');
@@ -108,6 +140,7 @@ export async function inicializarBanco(db: SQLiteDatabase): Promise<void> {
   try {
     if (atual < 1) await db.execAsync(MIGRACAO_1);
     if (atual < 2) await db.execAsync(MIGRACAO_2);
+    if (atual < 3) await db.execAsync(MIGRACAO_3);
     await db.execAsync(`PRAGMA user_version = ${VERSAO_BANCO};`);
     await db.execAsync('COMMIT;');
   } catch (erro) {
