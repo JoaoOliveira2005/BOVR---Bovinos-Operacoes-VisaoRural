@@ -139,7 +139,7 @@ test.each([
   expect(await repo.listar()).toEqual([]);
 });
 
-test('migra versão 1 para 2 sem perder pastos ou gastos e pode reinicializar', async () => {
+test('migra versão 1 para a versão atual sem perder pastos ou gastos e pode reinicializar', async () => {
   // Reconstitui o schema da versão anterior a partir da migração real.
   await db.execAsync('DROP TABLE cattle; PRAGMA user_version = 1;');
   await db.runAsync("INSERT INTO grass_types (name, min_height_cm, max_height_cm) VALUES ('Teste', 10, 20)");
@@ -151,7 +151,7 @@ test('migra versão 1 para 2 sem perder pastos ou gastos e pode reinicializar', 
   await inicializarBanco(db);
   await servico.salvar(entrada);
   await inicializarBanco(db);
-  expect((await db.getFirstAsync('PRAGMA user_version')).user_version).toBe(2);
+  expect((await db.getFirstAsync('PRAGMA user_version')).user_version).toBe(3);
   expect((await db.getFirstAsync('SELECT name FROM pastures')).name).toBe('Pasto teste');
   expect((await db.getFirstAsync('SELECT amount_cents FROM expenses')).amount_cents).toBe(12345);
   expect(await repo.listar()).toHaveLength(1);
@@ -162,7 +162,7 @@ test('falha na migração faz rollback e permite nova tentativa', async () => {
   await db.execAsync('DROP TABLE cattle; PRAGMA user_version = 1;');
   const executar = db.execAsync;
   const falhando = { ...db, execAsync: async (sql) => {
-    if (sql.startsWith('PRAGMA user_version = 2')) throw new Error('falha simulada');
+    if (sql.startsWith('PRAGMA user_version = 3')) throw new Error('falha simulada');
     return executar(sql);
   } };
   await expect(inicializarBanco(falhando)).rejects.toThrow('falha simulada');

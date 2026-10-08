@@ -68,6 +68,7 @@ export default function LayoutRaiz() {
           <Stack.Screen name="pasto-form" options={{ title: 'Cadastro de pasto' }} />
           <Stack.Screen name="tipos-capim" options={{ title: 'Tipos de capim' }} />
           <Stack.Screen name="vendas" options={{ title: 'Vendas' }} />
+          <Stack.Screen name="venda-form" options={{ title: 'Registro de venda' }} />
           <Stack.Screen name="gastos" options={{ title: 'Gastos' }} />
           <Stack.Screen name="gasto-form" options={{ title: 'Registro de gasto' }} />
           <Stack.Screen name="categorias-gasto" options={{ title: 'Categorias de gasto' }} />
