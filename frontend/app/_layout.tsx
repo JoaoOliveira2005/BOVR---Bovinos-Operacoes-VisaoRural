@@ -1,23 +1,52 @@
+import { Feather } from '@expo/vector-icons';
 import {
   Geist_400Regular,
   Geist_500Medium,
   Geist_600SemiBold,
   useFonts,
 } from '@expo-google-fonts/geist';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { inicializarBanco } from '../../backend/data/sqlite/database';
 import { SplashAnimado } from '../src/components/SplashAnimado';
-import { cores, fonte, tipografia } from '../src/theme/tokens';
+import { cores, espaco, fonte, raio, tipografia } from '../src/theme/tokens';
 
 // Segura a splash ate a Geist estar pronta, senao a primeira renderizacao sai
 // na fonte do sistema e o texto salta de lugar quando a fonte troca.
 SplashScreen.preventAutoHideAsync();
+
+function BotaoVoltarHeader() {
+  const router = useRouter();
+
+  const voltar = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  };
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Voltar para a tela anterior"
+      onPress={voltar}
+      style={({ pressed }) => [
+        estilosLayout.botaoVoltar,
+        pressed && estilosLayout.botaoVoltarPressionado,
+      ]}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+    >
+      <Feather name="arrow-left" size={20} color={cores.tinta} />
+    </Pressable>
+  );
+}
 
 export default function LayoutRaiz() {
   const [exibirSplash, setExibirSplash] = useState(true);
@@ -57,7 +86,7 @@ export default function LayoutRaiz() {
               fontSize: tipografia.subheading.fontSize,
             },
             headerShadowVisible: false,
-            headerBackButtonDisplayMode: 'minimal',
+            headerLeft: () => <BotaoVoltarHeader />,
             contentStyle: { backgroundColor: cores.canvas },
           }}
         >
@@ -78,3 +107,21 @@ export default function LayoutRaiz() {
     </SafeAreaProvider>
   );
 }
+
+const estilosLayout = StyleSheet.create({
+  botaoVoltar: {
+    width: 36,
+    height: 36,
+    borderRadius: raio.interativo,
+    backgroundColor: cores.paper,
+    borderWidth: 1,
+    borderColor: cores.fio,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: espaco.sm,
+  },
+  botaoVoltarPressionado: {
+    opacity: 0.72,
+    backgroundColor: cores.superficieAlt,
+  },
+});
