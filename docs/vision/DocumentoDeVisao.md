@@ -1,5 +1,5 @@
 ### Documento de Visão
-- #### Versão do documento: (0.2)
+- #### Versão do documento: (0.3)
 
 # Gestão de Rebanho Bovino — Aplicativo Android Offline
 
@@ -164,16 +164,18 @@ A altura adequada deverá poder ser alterada no aplicativo, pois varia conforme 
 | ID | Requisito |
 |----|-----------|
 | RF-19 | O sistema deve permitir o registro de vendas realizadas. |
-| RF-19.1 | A venda deve conter data, animais vendidos, comprador (texto livre), peso individual de cada animal, valor bruto e observações. Todos os campos são obrigatórios. |
+| RF-19.1 | A venda deve conter data, animais vendidos, comprador (texto livre), peso individual de cada animal em arrobas (@), valor bruto e observações. Todos os campos são obrigatórios. |
 | RF-19.2 | O sistema deve calcular automaticamente a quantidade de animais incluídos na venda. |
 | RF-19.3 | Quando a venda for confirmada pelo usuário, o sistema deve alterar automaticamente a situação de todos os animais vendidos para "vendido" e excluí-los da contagem de cabeças ativas. |
 | RF-20 | O sistema deve permitir consultar vendas. |
 | RF-20.1 | O sistema deve disponibilizar o histórico completo de vendas. |
 | RF-20.2 | O sistema deve permitir filtrar vendas por período, comprador, animal ou lote. |
-| RF-21 | O sistema deve permitir o registro de vendas planejadas. |
-| RF-21.1 | A venda planejada deve conter data prevista, animais ou lote e valor estimado. |
-| RF-21.2 | A venda planejada é separada da venda realizada e não converte automaticamente. |
-| RF-21.3 | O sistema não deve enviar notificações sobre vendas planejadas. |
+| RF-21 | O sistema deve tratar a venda como planejada (0) que se transforma em realizada (1) após confirmação do usuário. |
+| RF-21.1 | Quando o usuário criar uma venda planejada, o sistema deve apresentar tela que lista todos os animais apenas para seleção, sem edição. |
+| RF-21.2 | O item planejado deve conter animal, Valor@ em R$ obrigatório e Peso@ opcional; onde o Peso@ for informado, o sistema deve calcular o Preço em R$ como Peso@ × Valor@; onde o Peso@ for nulo, o sistema não deve calcular o preço. |
+| RF-21.3 | Enquanto a venda estiver planejada (0), o sistema deve permitir remover um animal ou marcá-lo como morto, sincronizando com a situação do animal (RF-06); se o animal estiver morto, então o sistema deve excluí-lo do cálculo real e manter o registro planejado. |
+| RF-21.4 | Quando o usuário acionar Realizar venda e informar o Peso@ real obrigatório de cada animal, o sistema deve alterar a venda de planejada (0) para realizada (1) e alterar a situação dos animais vendidos para "vendido" (RF-19.3), exceto os mortos. |
+| RF-21.5 | Onde a venda estiver realizada (1), o sistema deve permitir editar somente os valores; se a venda realizada for excluída, então o sistema não deve reverter a situação dos animais. |
 
 ### 5.6 Gastos gerais
 
@@ -191,6 +193,7 @@ A altura adequada deverá poder ser alterada no aplicativo, pois varia conforme 
 | RF-24.3 | O sistema deve calcular o total geral de gastos da fazenda. |
 | RF-25 | Quando o usuário solicitar o resultado financeiro, o sistema deve calcular valor bruto das vendas menos gastos gerais. |
 | RF-25.1 | Quando nenhum período for selecionado, o sistema deve considerar todo o histórico de vendas e gastos. |
+| RF-25.2 | O sistema deve considerar no resultado somente vendas realizadas (flag 1), nunca a meta planejada. |
 
 ### 5.7 Relatórios
 
@@ -255,7 +258,7 @@ A altura adequada deverá poder ser alterada no aplicativo, pois varia conforme 
 | RD-01 | Número do brinco é a identificação principal do animal. |
 | RD-02 | Controle individual e por lotes coexistem no mesmo sistema. |
 | RD-03 | Animal pertence a apenas um lote e um pasto por vez. |
-| RD-04 | Pesos registrados em quilogramas. |
+| RD-04 | Pesos registrados em arrobas (@). |
 | RD-05 | Área dos pastos registrada em hectares. |
 | RD-06 | Altura do capim registrada em centímetros. |
 
@@ -269,7 +272,7 @@ A altura adequada deverá poder ser alterada no aplicativo, pois varia conforme 
 | F02 | Reprodução | Situação reprodutiva, prenhez, previsão de parto, nascimento de bezerro. |
 | F03 | Vacinação e Saúde | Registro de vacinas e ocorrências de saúde, com histórico e classificação. |
 | F04 | Gestão dos Pastos | Cadastro, qualidade, movimentação, rotação e descanso de pastos. |
-| F05 | Vendas | Registro de vendas realizadas e planejamento de vendas futuras. |
+| F05 | Vendas | Venda planejada (0) que se transforma em realizada (1) após confirmação; pesos em @. |
 | F06 | Gastos Gerais | Registro, edição, exclusão e consulta de gastos por categoria. |
 | F07 | Relatórios | Relatórios de gado, vendas, gastos e resumo financeiro (tela e PDF). |
 | F08 | Armazenamento e Backup | Backup manual, restauração e proteção de dados localmente. |

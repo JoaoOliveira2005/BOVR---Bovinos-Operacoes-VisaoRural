@@ -1,5 +1,5 @@
 ### Requisitos
-- #### Versão do documento: (0.2)
+- #### Versão do documento: (0.3)
 
 # Escopo do projeto
 - Desenvolvimento de um aplicativo Android para controle individual e por lotes de bovinos, gerenciamento de pastos, registro de vendas e controle de gastos gerais da fazenda.
@@ -87,16 +87,18 @@
 
 5. ## Vendas
     - **RF-19**: O sistema deve permitir o registro de vendas realizadas.
-        - **RF-19.1**: A venda deve conter data, animais vendidos, comprador (texto livre), peso individual de cada animal, valor bruto e observações. Todos os campos são obrigatórios.
+        - **RF-19.1**: A venda deve conter data, animais vendidos, comprador (texto livre), peso individual de cada animal em arrobas (@), valor bruto e observações. Todos os campos são obrigatórios.
         - **RF-19.2**: O sistema deve calcular automaticamente a quantidade de animais incluídos na venda.
         - **RF-19.3**: Quando a venda for confirmada pelo usuário, o sistema deve alterar automaticamente a situação de todos os animais vendidos para "vendido" e excluí-los da contagem de cabeças ativas.
     - **RF-20**: O sistema deve permitir consultar vendas.
         - **RF-20.1**: O sistema deve disponibilizar o histórico completo de vendas.
         - **RF-20.2**: O sistema deve permitir filtrar vendas por período, comprador, animal ou lote.
-    - **RF-21**: O sistema deve permitir o registro de vendas planejadas.
-        - **RF-21.1**: A venda planejada deve conter data prevista, animais ou lote e valor estimado.
-        - **RF-21.2**: A venda planejada é separada da venda realizada e não converte automaticamente.
-        - **RF-21.3**: O sistema não deve enviar notificações sobre vendas planejadas.
+    - **RF-21**: O sistema deve tratar a venda como planejada (0) que se transforma em realizada (1) após confirmação do usuário.
+        - **RF-21.1**: Quando o usuário criar uma venda planejada, o sistema deve apresentar tela que lista todos os animais apenas para seleção, sem edição.
+        - **RF-21.2**: O item planejado deve conter animal, Valor@ em R$ obrigatório e Peso@ opcional; onde o Peso@ for informado, o sistema deve calcular o Preço em R$ como Peso@ × Valor@; onde o Peso@ for nulo, o sistema não deve calcular o preço.
+        - **RF-21.3**: Enquanto a venda estiver planejada (0), o sistema deve permitir remover um animal ou marcá-lo como morto, sincronizando com a situação do animal (RF-06); se o animal estiver morto, então o sistema deve excluí-lo do cálculo real e manter o registro planejado.
+        - **RF-21.4**: Quando o usuário acionar Realizar venda e informar o Peso@ real obrigatório de cada animal, o sistema deve alterar a venda de planejada (0) para realizada (1) e alterar a situação dos animais vendidos para "vendido" (RF-19.3), exceto os mortos.
+        - **RF-21.5**: Onde a venda estiver realizada (1), o sistema deve permitir editar somente os valores; se a venda realizada for excluída, então o sistema não deve reverter a situação dos animais.
 
 6. ## Gastos gerais
     - **RF-22**: O sistema deve permitir o registro de gastos gerais da fazenda.
@@ -111,6 +113,7 @@
         - **RF-24.3**: O sistema deve calcular o total geral de gastos da fazenda.
     - **RF-25**: Quando o usuário solicitar o resultado financeiro, o sistema deve calcular valor bruto das vendas menos gastos gerais.
         - **RF-25.1**: Quando nenhum período for selecionado, o sistema deve considerar todo o histórico de vendas e gastos.
+        - **RF-25.2**: O sistema deve considerar no resultado somente vendas realizadas (flag 1), nunca a meta planejada.
 
 7. ## Relatórios
     - **RF-26**: O sistema deve gerar o relatório de controle do gado.
@@ -170,7 +173,7 @@
 - **RD-01**: O número do brinco será a identificação principal do animal.
 - **RD-02**: O sistema deverá trabalhar com controle individual e controle por lotes.
 - **RD-03**: Um animal poderá pertencer a apenas um lote e um pasto por vez.
-- **RD-04**: Pesos deverão ser registrados em quilogramas.
+- **RD-04**: Pesos deverão ser registrados em arrobas (@).
 - **RD-05**: A área dos pastos deverá ser registrada em hectares.
 - **RD-06**: A altura do capim deverá ser registrada em centímetros.
 
@@ -182,6 +185,7 @@
 - **Capacidade**: Até 500 cabeças
 - **Identificação**: Numeração do brinco comum
 - **Controle**: Individual e por lotes
+- **Vendas**: Planejada (0) que se transforma em realizada (1) após confirmação; pesos em @
 - **Relatórios**: Gado, vendas e gastos
 - **Gastos**: Água, ração, mão de obra, infraestrutura (categorias iniciais, expansíveis pelo usuário)
 - **Notificações**: Não haverá
@@ -198,7 +202,7 @@
 | P-04 | RF-12 / RF-12.2 | "Machucado" é uma ocorrência de saúde separada ou a mesma coisa que "ocorrência de saúde"? Qual a diferença prática? | Machucado seria uma observação que pode ser checada. Caso o animal se machuque, deve ser possível informar quando ele foi tratado. Essa informação deve permanecer em um log/registro do animal para controle. | ✅ Respondida |
 | P-05 | RF-15.2 | A classificação de qualidade do pasto é automática (recalcula ao salvar os dados) ou o usuário precisa solicitar explicitamente? | O usuário fará a leitura manualmente. Essa leitura deve ter uma data, tendo em vista que essa informação pode ficar defasada. | ✅ Respondida |
 | P-06 | RF-19.1 | Todos os campos da venda (data, animais, comprador, peso, valor, observações) são obrigatórios? O peso total é a soma dos pesos individuais ou um valor digitado? O campo "comprador" é texto livre ou cadastro prévio? | Todos os campos são obrigatórios. O peso é individual. O comprador será um texto livre. | ✅ Respondida |
-| P-07 | RF-21 | Uma venda planejada pode se tornar uma venda realizada ou são coisas totalmente separadas? A venda planejada deve aparecer em algum relatório? | Será considerado apenas vendas realizadas. Esse input normalmente acontecerá após a venda já ter sido realizada. | ✅ Respondida |
+| P-07 | RF-21 | Uma venda planejada pode se tornar uma venda realizada ou são coisas totalmente separadas? A venda planejada deve aparecer em algum relatório? | Superada em 13/10/2026 — gerente redefiniu: a venda é planejada (0) que se transforma em realizada (1) após confirmação do usuário. | 🔄 Superada |
 | P-08 | RF-22.4 | O que significa "cadastrar outros gastos dentro dessas quatro categorias"? É permitir subcategorias dentro de água/ração/mão de obra/infraestrutura, ou apenas cadastrar múltiplos registros na mesma categoria? | É permitir subcategorias, assim será possível ter maior controle. | ✅ Respondida |
 | P-09 | RF-25 | A fórmula "valor bruto das vendas menos gastos gerais" considera vendas e gastos de que período? Se o usuário consultar um período específico, o cálculo deve filtrar por esse período? | O período de venda de gado costuma ser longo (1-2 anos), sendo assim, a métrica do período é esse. Calculado geralmente quando há novos bezerros. | ✅ Respondida |
 | P-10 | RF-34 / RF-35 | Qual o formato do arquivo de backup (JSON, ZIP, proprietário)? Onde o arquivo é salvo (pasta de downloads, pasta específica do app)? O usuário pode escolher o local? | Os dados serão armazenados dentro do app. Pasta específica do app. | ✅ Respondida |
@@ -212,3 +216,6 @@
 | P-18 | RF-35 | O que define um arquivo de backup como "válido"? Formato correto, integridade (hash), versão compatível — ou os três critérios? | Discutir. | ⏳ Pendente |
 | P-19 | RNF-05b/06b | Os requisitos RNF-05b e RNF-06b (exibir indicador de carregamento ao exceder o limite) contradizem os requisitos de desempenho RNF-05/06. Devemos remover os indicadores e manter apenas os limites de desempenho, ou manter os indicadores como comportamento adicional? | Manter o limite de desempenho. | ✅ Respondida |
 | P-20 | RF-11.2 | O registro de vacinação deve conter também a referência ao(s) animal(is) vacinado(s), ou essa vinculação já está implícita em RF-11 (aplicação individual)? | O registro de vacinação deve ser feito individualmente. Deve ser possível fazer um filtro para saber quais animais estão vacinados. | ✅ Respondida |
+| P-21 | RF-21.2, RD-04 | O "Valor@ R$" é total ou por @? Há conversão kg↔@? O Peso@ planejado é obrigatório e como o preço é calculado? | Valor@ individual por vaca em R$; Preço R$ = Peso@ × Valor@; pesos somente em @, sem conversão com kg; Peso@ planejado opcional (sem balança na fazenda; sem cálculo se nulo). | ✅ Respondida |
+| P-22 | RF-21 | Estender as tabelas sales/sale_items ou criar estrutura nova de eventos? | Estender: tabela única de vendas com flag 0 = planejada / 1 = realizada, com a mesma estrutura de itens. | ✅ Respondida |
+| P-23 | RF-21.4, RF-21.5 | O Peso@ real é obrigatório? Após realizada, edita o quê? Excluir a realizada reverte a situação dos animais? | Peso@ real obrigatório por animal (provisório); após realizada, edita somente valores; excluir a realizada não reverte a situação dos animais. | ✅ Respondida |
