@@ -1,4 +1,6 @@
-export type CondicaoCapim = 'verde' | 'parcialmente_seco' | 'seco';
+import type { QualidadePasto } from '../../../../backend/features/pastures/types';
+export type { CondicaoCapim } from '../../../../backend/features/pastures/types';
+import type { CondicaoCapim } from '../../../../backend/features/pastures/types';
 
 export type TipoCapim = {
   id: number;
@@ -18,9 +20,13 @@ export type Pasto = {
   alturaAtualCm: number;
   condicaoCapim: CondicaoCapim;
   coberturaPercentual: number;
+  qualidade: QualidadePasto;
+  dataLeitura: string | null;
 };
 
-export type EntradaPasto = Omit<Pasto, 'id' | 'tipoCapimNome'>;
+export type EntradaPasto = Omit<Pasto, 'id' | 'tipoCapimNome' | 'qualidade' | 'dataLeitura'> & {
+  dataLeitura?: string;
+};
 
 export interface RepositorioPastos {
   listar(): Promise<Pasto[]>;

@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const VERSAO_BANCO = 2;
+const VERSAO_BANCO = 3;
 
 const MIGRACAO_1 = `
 CREATE TABLE IF NOT EXISTS grass_types (
@@ -96,6 +96,69 @@ CREATE INDEX IF NOT EXISTS idx_cattle_ear_tag
   ON cattle(trim(ear_tag) COLLATE NOCASE);
 `;
 
+const MIGRACAO_3 = `
+CREATE TABLE herds (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (length(trim(name)) > 0),
+  description TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE cattle ADD COLUMN herd_id INTEGER REFERENCES herds(id) ON DELETE RESTRICT;
+ALTER TABLE cattle ADD COLUMN pasture_id INTEGER REFERENCES pastures(id) ON DELETE RESTRICT;
+CREATE INDEX idx_cattle_herd ON cattle(herd_id);
+CREATE INDEX idx_cattle_pasture ON cattle(pasture_id);
+
+CREATE TABLE pasture_inspections (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pasture_id INTEGER NOT NULL REFERENCES pastures(id) ON DELETE RESTRICT,
+  inspected_on TEXT NOT NULL CHECK (inspected_on GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  grass_type_id INTEGER NOT NULL REFERENCES grass_types(id) ON DELETE RESTRICT,
+  min_height_cm REAL NOT NULL CHECK (min_height_cm >= 0),
+  max_height_cm REAL NOT NULL CHECK (max_height_cm >= min_height_cm),
+  grass_height_cm REAL NOT NULL CHECK (grass_height_cm >= 0),
+  grass_condition TEXT NOT NULL CHECK (grass_condition IN ('verde', 'parcialmente_seco', 'seco')),
+  coverage_percent INTEGER NOT NULL CHECK (typeof(coverage_percent) = 'integer' AND coverage_percent BETWEEN 0 AND 100),
+  quality TEXT NOT NULL CHECK (quality IN ('boa', 'regular', 'ruim')),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_pasture_inspections_date ON pasture_inspections(pasture_id, inspected_on DESC, id DESC);
+
+-- Cada linha guarda um animal; herd_id identifica uma movimentação de lote.
+-- Assim, um lote pode sair de vários pastos sem perder as origens individuais.
+CREATE TABLE pasture_movements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cattle_id INTEGER NOT NULL REFERENCES cattle(id) ON DELETE RESTRICT,
+  herd_id INTEGER REFERENCES herds(id) ON DELETE RESTRICT,
+  origin_pasture_id INTEGER REFERENCES pastures(id) ON DELETE RESTRICT,
+  destination_pasture_id INTEGER REFERENCES pastures(id) ON DELETE RESTRICT,
+  moved_on TEXT NOT NULL CHECK (moved_on GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (origin_pasture_id IS NOT destination_pasture_id)
+);
+CREATE INDEX idx_pasture_movements_cattle ON pasture_movements(cattle_id, moved_on DESC, id DESC);
+CREATE INDEX idx_pasture_movements_origin ON pasture_movements(origin_pasture_id, moved_on DESC);
+CREATE INDEX idx_pasture_movements_destination ON pasture_movements(destination_pasture_id, moved_on DESC);
+CREATE INDEX idx_pasture_movements_herd ON pasture_movements(herd_id, moved_on DESC);
+
+CREATE TABLE pasture_rest_periods (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pasture_id INTEGER NOT NULL REFERENCES pastures(id) ON DELETE RESTRICT,
+  started_on TEXT NOT NULL CHECK (started_on GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  ended_on TEXT CHECK (ended_on IS NULL OR (ended_on >= started_on AND ended_on GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'))
+);
+CREATE UNIQUE INDEX idx_pasture_rest_open ON pasture_rest_periods(pasture_id) WHERE ended_on IS NULL;
+CREATE INDEX idx_pasture_rest_date ON pasture_rest_periods(pasture_id, started_on DESC, id DESC);
+
+-- A baixa precisa passar pela saída datada para não perder a rotação/descanso.
+CREATE TRIGGER cattle_status_requires_pasture_exit
+BEFORE UPDATE OF status ON cattle
+WHEN NEW.status <> 'ativo' AND NEW.pasture_id IS NOT NULL
+BEGIN
+  SELECT RAISE(ABORT, 'Retire o animal do pasto antes de alterar sua situação.');
+END;
+`;
+
 export async function inicializarBanco(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   await db.execAsync('PRAGMA foreign_keys = ON;');
@@ -108,6 +171,7 @@ export async function inicializarBanco(db: SQLiteDatabase): Promise<void> {
   try {
     if (atual < 1) await db.execAsync(MIGRACAO_1);
     if (atual < 2) await db.execAsync(MIGRACAO_2);
+    if (atual < 3) await db.execAsync(MIGRACAO_3);
     await db.execAsync(`PRAGMA user_version = ${VERSAO_BANCO};`);
     await db.execAsync('COMMIT;');
   } catch (erro) {
