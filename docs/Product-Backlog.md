@@ -1,6 +1,6 @@
 # Product Backlog — BOVR (Bovinos — Operações Visão Rural)
 
-**Versão:** 0.2  
+**Versão:** 0.3  
 **Autor:** Equipe de desenvolvimento  
 **Status:** Draft — aguardando refinement  
 **Data:** 2026-09-15  
@@ -386,7 +386,7 @@ ACs (Dado/Quando/Então):
 1. Dado que o fazendeiro preenche venda, Quando todos os campos são informados, Então o sistema permite salvar (RF-19.1 — todos obrigatórios)
 2. Dado que a venda é salva, Quando o sistema calcula, Então apresenta quantidade de animais incluídos (RF-19.2)
 3. Dado que a venda é confirmada, Quando o fazendeiro confirma, Então todos os animais vendidos têm situação alterada para "vendido" e saem da contagem de ativos (RF-19.3)
-4. Dado que peso é informado, Quando salvo, Então é peso individual de cada animal em kg (RD-04)
+4. Dado que peso é informado, Quando salvo, Então é peso individual de cada animal em @ (RD-04)
 
 DoR: ✓ Todos os campos obrigatórios validados na UI
 DoD: ✓ Venda funciona, baixa automática, todos os campos obrigatórios
@@ -394,21 +394,24 @@ DoD: ✓ Venda funciona, baixa automática, todos os campos obrigatórios
 
 ---
 
-### B-18 — Consultar vendas + vendas planejadas separadas
-**Should · 3 pts · RF-20/20.1/20.2/21/21.1/21.2/21.3**
+### B-18 — Venda planejada (0) que se transforma em realizada (1)
+**Should · 3 pts · RF-20/20.1/20.2/21/21.1/21.2/21.3/21.4/21.5**
 
 ```
 - Como fazendeiro,
-- Quero consultar o histórico de vendas por período, comprador, animal ou lote, com vendas planejadas mantidas separadas,
-- Para que eu tenha visão completa do histórico comercial.
+- Quero criar a venda como planejada (selecionando vacas e informando Valor@/R$ e Peso@) e transformá-la em realizada após confirmação,
+- Para que eu planeje a venda do ciclo e registre os valores reais ao final.
 
 ACs (Dado/Quando/Então):
-1. Dado que o fazendeiro consulta vendas, Quando filtra por período/comprador/animal/lote, Então o histórico completo é apresentado (RF-20.1, RF-20.2)
-2. Dado que há vendas planejadas, Quando visualizadas, Então são separadas das vendas realizadas e não convertem automaticamente (RF-21.2)
-3. Dado que vendas planejadas existem, Quando verificado, Então nenhuma notificação é enviada (RF-21.3)
+1. Dado que o fazendeiro cria uma venda planejada, Quando a tela de seleção é exibida, Então lista todos os animais apenas para seleção, sem edição (RF-21.1)
+2. Dado que o fazendeiro informa Valor@ em R$ e Peso@ opcional por vaca, Quando o Peso@ é informado, Então o sistema calcula Preço R$ = Peso@ × Valor@; quando nulo, não calcula (RF-21.2)
+3. Dado que a venda está planejada (0), Quando o fazendeiro remove uma vaca ou a marca como morta, Então sincroniza com a situação do animal e a morta sai do cálculo real (RF-21.3, RF-06)
+4. Dado que o fazendeiro aciona Realizar venda e informa o Peso@ real obrigatório de cada vaca, Quando confirma, Então a venda passa a realizada (1) e os animais têm situação alterada para "vendido", exceto mortos (RF-21.4, RF-19.3)
+5. Dado que a venda está realizada (1), Quando o fazendeiro edita, Então somente valores são editáveis; quando excluída, Então a situação dos animais não é revertida (RF-21.5)
+6. Dado que o fazendeiro consulta vendas, Quando filtra por período/comprador/animal/lote, Então o histórico completo é apresentado (RF-20.1, RF-20.2)
 
-DoR: ✓ Filtros de consulta definidos
-DoD: ✓ Consulta funciona, planejadas separadas, sem notificações
+DoR: ✓ Tela de seleção e regra do flag 0/1 definidas
+DoD: ✓ Transformação 0→1 funciona, cálculo Peso@ × Valor@ correto, exclusão não reverte status
 ```
 
 ---
@@ -593,7 +596,7 @@ DoD: ✓ Suite de testes passando = item concluído (DoD implícito)
 - Nenhum item vai para `Done` sem satisfazer o **DoD checklist** completo
 - **B-24** permanece em `Backlog` até P-12/P-18 serem respondidos
 - Se velocidade < 13 pts/sprint, recomenda-se quebrar B-17 (8 pts) em dois itens menores
-- NÃO adicionar notificações (RF-14/RF-21.3), NÃO permitir múltiplos usuários sem reavaliar modelagem
+- NÃO adicionar notificações (RF-14), NÃO permitir múltiplos usuários sem reavaliar modelagem
 
 ---
 
