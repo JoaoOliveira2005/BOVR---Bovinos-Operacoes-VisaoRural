@@ -1,14 +1,15 @@
-# Arquitetura do BOVR — V1.1
+# Arquitetura do BOVR — V1.2
 
 O BOVR é um aplicativo Android de usuário único, totalmente offline. O sistema é
 dividido em duas camadas no próprio aparelho: o **frontend** (telas e navegação
 em React Native) e o **backend local** (domínio, casos de uso e acesso a dados
 via SQLite). Nenhuma camada faz chamadas de rede.
 
-> ⚠️ **Decisão de escopo (gerente do projeto):** somente vendas realizadas.
-> **RF-21 / B-18 (vendas planejadas) estão desconsiderados por enquanto**, até a
-> próxima reunião definir (conflito RF-21 × P-07). Nenhuma tabela de vendas
-> planejadas nesta versão.
+> ✅ **Decisão de escopo (gerente do projeto, 13/10/2026):** vendas planejadas
+> **voltaram ao escopo** (P-07 superada, P-21/P-22/P-23 respondidas). Venda é
+> **tabela única com flag**: `sales.status = 0` (planejada) → `1` (realizada)
+> após confirmação (RF-21). Pesos em **arrobas (@)**, sem conversão com kg
+> (RD-04). Sem `sale_events` separada.
 
 ```mermaid
 flowchart TB
@@ -54,17 +55,19 @@ flowchart TB
 - Expo SQLite é a única fonte persistente de dados; chaves estrangeiras ficam
   habilitadas e o banco opera em modo WAL.
 - Dinheiro é armazenado como centavos inteiros e datas como `YYYY-MM-DD`.
+- Vendas usam **tabela única** com flag `0 = planejada` / `1 = realizada`
+  (RF-21, P-22); pesos em **arrobas (@)**, sem conversão com kg (RD-04).
 - As categorias Água, Ração, Mão de obra e Infraestrutura são seeds protegidos.
 - Registros auxiliares em uso não são excluídos em cascata.
 
-## Convenções de nomenclatura (V1.1)
+## Convenções de nomenclatura (V1.2)
 
 - **Banco 100% em inglês**, `snake_case`. A RNF-17 exige pt-BR só na
   **interface** — identificadores do schema nunca misturam idiomas.
 - Nomes revelam intenção sem precisar da documentação (Clean Code, Cap. 1):
   `pasture_inspections` (vistoria de qualidade datada),
   `herd_memberships` (histórico de pertencimento a lotes),
-  `sale_items` (bovino + peso individual da venda).
+  `sale_items` (bovino + Valor@ e pesos planejado/real da venda).
 - `lots` foi rejeitado por ambiguidade; lote de manejo = `herds`.
 - Bovino = `cattle` (aplicativo focado em bovinos).
 - Timestamps em `TEXT ISO8601` (SQLite não tem `TIMESTAMPTZ`); dinheiro em
@@ -72,7 +75,7 @@ flowchart TB
 - PKs surrogate `INTEGER AUTOINCREMENT`; brinco (`tag_number`) é identificador
   de negócio com `UNIQUE` parcial entre ativos, nunca PK.
 
-## DER — modelo de dados (V1.1)
+## DER — modelo de dados (V1.2)
 
 ```mermaid
 erDiagram
@@ -183,10 +186,11 @@ erDiagram
     }
     SALES {
         INTEGER id PK
-        TEXT sold_on "YYYY-MM-DD"
-        TEXT buyer "free text"
-        INTEGER gross_amount_cents "all mandatory"
-        TEXT notes
+        INTEGER status "0 planned | 1 realized, CHECK IN"
+        TEXT sold_on "nullable, filled at 0 to 1"
+        TEXT buyer "nullable, free text, filled at 0 to 1"
+        INTEGER gross_amount_cents "nullable, filled at 0 to 1"
+        TEXT notes "nullable, filled at 0 to 1"
         TEXT created_at
         TEXT updated_at
     }
@@ -194,7 +198,11 @@ erDiagram
         INTEGER id PK
         INTEGER sale_id FK "CASCADE, meaningless alone"
         INTEGER cattle_id FK "RESTRICT, keeps history"
-        REAL weight_kg "individual weight"
+        INTEGER price_per_arroba_cents "Valor@ mandatory"
+        REAL planned_weight_arroba "nullable, optional Peso@"
+        INTEGER planned_total_cents "nullable, Peso@ x Valor@"
+        REAL actual_weight_arroba "mandatory when status=1"
+        INTEGER actual_total_cents "nullable, at realization"
     }
     EXPENSE_CATEGORIES {
         INTEGER id PK
@@ -219,23 +227,32 @@ erDiagram
 **Legenda do DER (pé-de-galinha):** `||` = exatamente um · `o{` = zero ou
 mais · `o|` = zero ou um · `}o` = zero ou mais (lado esquerdo). As
 cardinalidades do diagrama espelham a tabela em
-`### Cardinalidades (V1.1)` — qualquer divergência entre os dois é erro.
+`### Cardinalidades (V1.2)` — qualquer divergência entre os dois é erro.
 
 ### Regras de integridade do DER
 
 - `tag_number` tem `UNIQUE` **parcial** só entre `status = 'active'`
   (RF-01.1/RF-01.2 × RF-06.1: vendidos/mortos/transferidos permanecem no
   histórico com o mesmo brinco).
-- Sem `DELETE` físico em `cattle` e `sales` — só troca de `status`. Histórico
+- Sem `DELETE` físico em `cattle` — só troca de `status` (RF-06.1). Histórico
   de lotes, vacinas, saúde e itens de venda usa `ON DELETE RESTRICT`.
-- Única exceção: `sale_items.sale_id → ON DELETE CASCADE` (item sem venda não
-  tem sentido sozinho).
+- `sales.status` é `0` (planejada) ou `1` (realizada) — **tabela única**
+  (RF-21, P-22). Na virada `0 → 1` (RF-21.4) a aplicação preenche
+  `sold_on`, `buyer`, `gross_amount_cents`, `notes` (obrigatórios, RF-19.1)
+  e `actual_weight_arroba` de cada item — SQLite não impõe "não-nulo só quando
+  flag = 1", então a obrigação é validada no app.
+- Excluir venda realizada **não reverte** `cattle.status` (RF-21.5);
+  `sale_items` sai em cascata com a venda.
+- Animal morto (`cattle.status = 'dead'`) em venda planejada é excluído do
+  **cálculo real** mas permanece como registro planejado (RF-21.3).
+- Única exceção de cascata: `sale_items.sale_id → ON DELETE CASCADE` (item sem
+  venda não tem sentido sozinho).
 - `pasture_movements` exige exatamente um dos dois (`cattle_id` ou `herd_id`)
   e `destination_pasture_id ≠ origin_pasture_id` (via `CHECK`).
 - `pasture_inspections.quality` é gravada a cada vistoria (histórico RF-15.3),
   calculada de altura × condição × cobertura (RF-15.2).
 
-### Cardinalidades (V1.1)
+### Cardinalidades (V1.2)
 
 Regra aplicada: 1:N = FK no lado N, sem tabela extra · N:N = tabela associativa.
 
@@ -254,7 +271,7 @@ Regra aplicada: 1:N = FK no lado N, sem tabela extra · N:N = tabela associativa
 | 11 | `cattle` ↔ `reproductive_events` | 1:N | FK `cattle_id` NOT NULL, `RESTRICT` | RF-08 |
 | 12 | `cattle` ↔ `vaccinations` | 1:N | FK `cattle_id` NOT NULL, `RESTRICT` | RF-11.3 |
 | 13 | `cattle` ↔ `health_events` | 1:N | FK `cattle_id` NOT NULL, `RESTRICT` | RF-12 |
-| 14 | `sales` ↔ `cattle` | N:N | Associativa `sale_items` (`sale_id`, `cattle_id`, `weight_kg`) | RF-19.1/19.2 |
+| 14 | `sales` ↔ `cattle` | N:N | Associativa `sale_items` (`sale_id`, `cattle_id`, `price_per_arroba_cents`, `planned_*`, `actual_*`) | RF-19.1/19.2, RF-21.2/21.4 |
 | 15 | `expense_categories` ↔ `expenses` | 1:N | FK `expenses.category_id` NOT NULL, `RESTRICT` | RF-22.1 |
 | 16 | `expense_categories` ↔ `expense_subcategories` | 1:N | FK `subcategories.category_id` NOT NULL, `RESTRICT` | RF-22.4 |
 | 17 | `expense_subcategories` ↔ `expenses` | 1:N opcional | FK `expenses.subcategory_id` anulável, `RESTRICT` | RF-22.4 |
@@ -263,7 +280,7 @@ Nenhum relacionamento 1:1 no modelo — nenhuma entidade é mera extensão de
 outra. O item 9/10 é o único não-canônico (FK condicional com XOR em uma tabela
 única, preservando o histórico de rotação do pasto — RF-17.2 — numa consulta só).
 
-## Rastreabilidade RF → tabela (V1.1)
+## Rastreabilidade RF → tabela (V1.2)
 
 | Requisito | Tabelas |
 |---|---|
@@ -275,14 +292,14 @@ outra. O item 9/10 é o único não-canônico (FK condicional com XOR em uma tab
 | RF-17 (movimentação) | `pasture_movements` |
 | RF-18 (lotação, permanência, descanso) | `cattle`, `pasture_movements`, `pasture_inspections` (consultas) |
 | RF-19–RF-20 (vendas) | `sales`, `sale_items` |
-| RF-21 (planejadas) | **fora de escopo nesta versão** (decisão do gerente) |
+| RF-21 (planejada → realizada, flag 0/1) | `sales.status`, `sale_items` (`planned_*` → `actual_*`), `cattle.status` |
 | RF-22–RF-24 (gastos) | `expense_categories`, `expense_subcategories`, `expenses` |
-| RF-25 (resultado financeiro) | `sales` + `expenses` (consulta) |
+| RF-25 (resultado financeiro) | `sales` (`status = 1`) + `expenses` (consulta) |
 | RF-26–RF-30 (relatórios) | consultas sobre as tabelas acima |
 | RF-31–RF-36 (offline, backup) | `bovr.db` local; backup/restauração fora do DER |
 | RNF-12/RNF-13 (PIN, proteção) | fora do DER — pendentes P-12/P-18 |
 
-## Índices previstos (V1.1)
+## Índices previstos (V1.2)
 
 - `UNIQUE` parcial: `cattle(tag_number) WHERE status = 'active'`.
 - `UNIQUE`: `grass_types(name)`, `herds(name)`, `expense_categories(name)`,
@@ -292,5 +309,5 @@ outra. O item 9/10 é o único não-canônico (FK condicional com XOR em uma tab
   `health_events(cattle_id, status)`, `pasture_inspections(pasture_id, inspected_on)`,
   `pasture_movements(destination_pasture_id, moved_on)`,
   `sale_items(sale_id)`, `sale_items(cattle_id)`,
-  `expenses(expense_date DESC)`, `expenses(category_id)`.
+  `sales(status, sold_on)`, `expenses(expense_date DESC)`, `expenses(category_id)`.
 - Composto leitura financeira: `expenses(category_id, expense_date)`.

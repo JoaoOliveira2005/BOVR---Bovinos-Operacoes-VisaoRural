@@ -1,4 +1,4 @@
-## Dicionário de dados (V1.1)
+## Dicionário de dados (V1.2)
 
 Formato: `coluna | tipo | nulo? | padrão | restrição | significado | rótulo pt-BR`.
 
@@ -121,35 +121,47 @@ Formato: `coluna | tipo | nulo? | padrão | restrição | significado | rótulo 
 | `status` | TEXT | NÃO | `'under_treatment'` | `CHECK IN ('under_treatment','recovered','closed')` | Situação atual | Situação |
 | `origin` | TEXT | NÃO | `'case'` | `CHECK IN ('case','injury_note')` | Ocorrência ou observação de machucado | Tipo |
 
-### `sales` — venda realizada (RF-19) — só realizadas, sem planejadas
+### `sales` — venda planejada (0) → realizada (1) (RF-19, RF-21) — tabela única
 
 | Coluna | Tipo | Nulo? | Padrão | Restrição | Significado | Rótulo pt-BR |
 |---|---|---|---|---|---|---|
 | `id` | INTEGER | NÃO | autoincremento | PK | Identificador da venda | — |
-| `sold_on` | TEXT | NÃO | — | `YYYY-MM-DD` | Data da venda | Data |
-| `buyer` | TEXT | NÃO | — | texto livre (RF-19.1) | Comprador | Comprador |
-| `gross_amount_cents` | INTEGER | NÃO | — | `CHECK > 0` | Valor bruto em centavos | Valor bruto |
-| `notes` | TEXT | NÃO | — | obrigatório (RF-19.1) | Observações | Observações |
+| `status` | INTEGER | NÃO | `0` | `CHECK IN (0,1)` | 0 = planejada, 1 = realizada (RF-21) | Situação |
+| `sold_on` | TEXT | SIM | NULL | `YYYY-MM-DD` | Data da venda; preenchida na virada 0→1 (RF-19.1) | Data |
+| `buyer` | TEXT | SIM | NULL | — | texto livre; obrigatório ao realizar (RF-19.1) | Comprador |
+| `gross_amount_cents` | INTEGER | SIM | NULL | `CHECK > 0` | Valor bruto em centavos; obrigatório ao realizar (RF-19.1) | Valor bruto |
+| `notes` | TEXT | SIM | NULL | — | obrigatório ao realizar (RF-19.1) | Observações |
 | `created_at` | TEXT | NÃO | `CURRENT_TIMESTAMP` | — | Quando foi registrada | — |
 | `updated_at` | TEXT | NÃO | `CURRENT_TIMESTAMP` | — | Última alteração | — |
 
-### `sale_items` — itens da venda (RF-19.1/19.2, RD-04)
+Nulos permitidos apenas com `status = 0` (RF-19.1 exige todos os campos na
+realização); a obrigatoriedade na virada 0→1 é validada pela aplicação.
+Excluir a venda não reverte a situação dos animais (RF-21.5).
+
+### `sale_items` — itens da venda planejada e realizada (RF-19.1/19.2, RF-21.2/21.4, RD-04)
 
 | Coluna | Tipo | Nulo? | Padrão | Restrição | Significado | Rótulo pt-BR |
 |---|---|---|---|---|---|---|
 | `id` | INTEGER | NÃO | autoincremento | PK | Identificador do item | — |
 | `sale_id` | INTEGER | NÃO | — | FK `sales(id)` `CASCADE` | Venda do item | Venda |
-| `cattle_id` | INTEGER | NÃO | — | FK `cattle(id)` `RESTRICT` | Animal vendido | Animal |
-| `weight_kg` | REAL | NÃO | — | `CHECK > 0` | Peso individual em kg | Peso (kg) |
+| `cattle_id` | INTEGER | NÃO | — | FK `cattle(id)` `RESTRICT` | Animal da venda | Animal |
+| `price_per_arroba_cents` | INTEGER | NÃO | — | `CHECK > 0` | Valor@ em centavos, obrigatório (RF-21.2) | Valor@ |
+| `planned_weight_arroba` | REAL | SIM | NULL | `CHECK > 0` | Peso@ planejado; opcional, sem balança (RF-21.2) | Peso@ planejado |
+| `planned_total_cents` | INTEGER | SIM | NULL | `CHECK > 0` | Preço planejado = Peso@ × Valor@; NULL se peso nulo (RF-21.2) | Preço planejado |
+| `actual_weight_arroba` | REAL | SIM | NULL | `CHECK > 0` | Peso@ real; obrigatório ao realizar (RF-21.4) | Peso@ real |
+| `actual_total_cents` | INTEGER | SIM | NULL | `CHECK > 0` | Preço real = Peso@ real × Valor@; gravado na virada 0→1 | Preço real |
 
-Ao confirmar a venda, o app altera `cattle.status → 'sold'` (RF-19.3).
+Pesos **somente em arrobas (@)** — sem conversão com kg (RD-04, P-21).
+Animal morto em venda planejada é excluído do cálculo real, mantendo o
+registro planejado (RF-21.3). Na confirmação (RF-19.3/RF-21.4) o app altera
+`cattle.status → 'sold'`, exceto os mortos.
 
 ### `expense_categories` / `expense_subcategories` / `expenses` — gastos (RF-22–RF-24) — já existem
 
 Seeds protegidos (`is_system = 1`): Água, Ração, Mão de obra, Infraestrutura
 (RF-22.2). Categorias do sistema não podem ser renomeadas nem excluídas.
 
-### Chaves candidatas (V1.1)
+### Chaves candidatas (V1.2)
 
 Candidatas = colunas que identificariam a linha sozinhas; elege-se uma como PK
 e o resto vira alternada (`UNIQUE`).
@@ -172,20 +184,20 @@ e o resto vira alternada (`UNIQUE`).
 | `expense_subcategories` | `id`, (`category_id`, `name`) | `id` | composta (`category_id`, `name`) |
 | `expenses` | `id` (só) | `id` | — |
 
-### Normalização (V1.1)
+### Normalização (V1.2)
 
 Critério: 3FN basta. Todas as PKs são surrogate de coluna única, logo a 2FN é
 automática em todas as tabelas (sem dependência parcial possível). Vereditos:
 
-**Passam em 3FN (13 tabelas):** `herds`, `cattle` (as FKs `herd_id`,
+**Passam em 3FN (12 tabelas):** `herds`, `cattle` (as FKs `herd_id`,
 `pasture_id` e `mother_id` são fatos do vínculo, não transitividade),
 `herd_memberships`, `grass_types`, `pastures`, `pasture_movements`,
 `vaccinations`, `health_events`, `sales` (`gross_amount_cents` é entrada
-independente — RF-19.1 — não derivável dos itens), `sale_items`,
-`expense_categories`, `expense_subcategories`, `expenses` (nomes só via `JOIN`;
-os `*Nome` nos tipos TS são display, não coluna).
+independente — RF-19.1 — não derivável dos itens),
+`expense_categories`, `expense_subcategories`, `expenses` (nomes só via
+`JOIN`; os `*Nome` nos tipos TS são display, não coluna).
 
-**Exceções justificadas (2):**
+**Exceções justificadas (3):**
 
 1. `pasture_inspections.quality` — redundância calculada intencional: depende
    de altura, condição, cobertura e da faixa ideal do capim. Gravada porque o
@@ -194,3 +206,8 @@ os `*Nome` nos tipos TS são display, não coluna).
 2. `reproductive_events.expected_calving_date` — função determinística de
    `breeding_date` (RF-09), gravada por conveniência de consulta e relatório.
    Mesma regra: recalculada a cada escrita.
+3. `sale_items.planned_total_cents` e `sale_items.actual_total_cents` —
+   derivados de `price_per_arroba_cents × peso@` (RF-21.2/21.4), gravados
+   para consulta financeira sem recálculo a cada leitura. Regra: recalculados
+   a cada escrita, nunca editados direto (exceto RF-21.5, edição de valores na
+   venda realizada, que os recalcula junto).
