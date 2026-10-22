@@ -212,8 +212,24 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
               item.brinco.trim(),
             );
           }
+
+          // Desconsidera este animal de outras vendas planejadas
+          await this.db.runAsync(
+            `DELETE FROM sale_items
+             WHERE sale_id IN (SELECT id FROM sales WHERE sale_type = 'planejada')
+               AND (animal_id = ? OR trim(ear_tag) = ? COLLATE NOCASE)`,
+            animalId,
+            item.brinco.trim(),
+          );
         }
       }
+
+      // Remove vendas planejadas que ficaram sem animais
+      await this.db.runAsync(
+        `DELETE FROM sales
+         WHERE sale_type = 'planejada'
+           AND NOT EXISTS (SELECT 1 FROM sale_items WHERE sale_items.sale_id = sales.id)`,
+      );
 
       await this.db.execAsync('COMMIT;');
       return saleId;
@@ -226,6 +242,16 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
   async atualizar(id: number, entrada: EntradaVenda): Promise<void> {
     try {
       await this.db.execAsync('BEGIN IMMEDIATE;');
+
+      const vendaAnterior = await this.db.getFirstAsync<{ sale_type: TipoVenda }>(
+        `SELECT sale_type FROM sales WHERE id = ?`,
+        id,
+      );
+
+      const itensAntigos = await this.db.getAllAsync<{ animal_id: number | null; ear_tag: string }>(
+        `SELECT animal_id, ear_tag FROM sale_items WHERE sale_id = ?`,
+        id,
+      );
 
       const resultado = await this.db.runAsync(
         `UPDATE sales
@@ -242,6 +268,25 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
 
       if (!resultado.changes) {
         throw new ErroDominio('nao_encontrado', 'Venda não encontrada.');
+      }
+
+      // Se era realizada e agora virou planejada, devolve os animais para ativos
+      if (vendaAnterior?.sale_type === 'realizada' && entrada.tipo === 'planejada') {
+        for (const it of itensAntigos) {
+          if (it.animal_id) {
+            await this.db.runAsync(
+              `UPDATE cattle SET status = 'ativo', updated_at = CURRENT_TIMESTAMP
+               WHERE id = ? AND status = 'vendido'`,
+              it.animal_id,
+            );
+          } else {
+            await this.db.runAsync(
+              `UPDATE cattle SET status = 'ativo', updated_at = CURRENT_TIMESTAMP
+               WHERE trim(ear_tag) = ? COLLATE NOCASE AND status = 'vendido'`,
+              it.ear_tag.trim(),
+            );
+          }
+        }
       }
 
       // Remove itens antigos e reinsere
@@ -281,8 +326,25 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
               item.brinco.trim(),
             );
           }
+
+          // Desconsidera de outras vendas planejadas
+          await this.db.runAsync(
+            `DELETE FROM sale_items
+             WHERE sale_id IN (SELECT s.id FROM sales s WHERE s.sale_type = 'planejada' AND s.id <> ?)
+               AND (animal_id = ? OR trim(ear_tag) = ? COLLATE NOCASE)`,
+            id,
+            animalId,
+            item.brinco.trim(),
+          );
         }
       }
+
+      // Remove vendas planejadas que ficaram sem animais
+      await this.db.runAsync(
+        `DELETE FROM sales
+         WHERE sale_type = 'planejada'
+           AND NOT EXISTS (SELECT 1 FROM sale_items WHERE sale_items.sale_id = sales.id)`,
+      );
 
       await this.db.execAsync('COMMIT;');
     } catch (erro) {
@@ -293,9 +355,51 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
   }
 
   async excluir(id: number): Promise<void> {
-    const resultado = await this.db.runAsync('DELETE FROM sales WHERE id = ?', id);
-    if (!resultado.changes) {
-      throw new ErroDominio('nao_encontrado', 'Venda não encontrada.');
+    try {
+      await this.db.execAsync('BEGIN IMMEDIATE;');
+
+      const venda = await this.db.getFirstAsync<{ sale_type: TipoVenda }>(
+        `SELECT sale_type FROM sales WHERE id = ?`,
+        id,
+      );
+
+      if (!venda) {
+        throw new ErroDominio('nao_encontrado', 'Venda não encontrada.');
+      }
+
+      // Se a venda for realizada, devolve animais vendidos para ativos ao excluir a venda
+      if (venda.sale_type === 'realizada') {
+        const itens = await this.db.getAllAsync<{ animal_id: number | null; ear_tag: string }>(
+          `SELECT animal_id, ear_tag FROM sale_items WHERE sale_id = ?`,
+          id,
+        );
+        for (const it of itens) {
+          if (it.animal_id) {
+            await this.db.runAsync(
+              `UPDATE cattle SET status = 'ativo', updated_at = CURRENT_TIMESTAMP
+               WHERE id = ? AND status = 'vendido'`,
+              it.animal_id,
+            );
+          } else {
+            await this.db.runAsync(
+              `UPDATE cattle SET status = 'ativo', updated_at = CURRENT_TIMESTAMP
+               WHERE trim(ear_tag) = ? COLLATE NOCASE AND status = 'vendido'`,
+              it.ear_tag.trim(),
+            );
+          }
+        }
+      }
+
+      const resultado = await this.db.runAsync('DELETE FROM sales WHERE id = ?', id);
+      if (!resultado.changes) {
+        throw new ErroDominio('nao_encontrado', 'Venda não encontrada.');
+      }
+
+      await this.db.execAsync('COMMIT;');
+    } catch (erro) {
+      await this.db.execAsync('ROLLBACK;').catch(() => undefined);
+      if (erro instanceof ErroDominio) throw erro;
+      converterErroSqlite(erro, 'Venda');
     }
   }
 }

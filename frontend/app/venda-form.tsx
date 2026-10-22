@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -94,47 +94,61 @@ export default function FormularioVenda() {
   const [selecionadosNoModal, setSelecionadosNoModal] = useState<Set<number>>(new Set());
   const [trocandoItemTempId, setTrocandoItemTempId] = useState<string | null>(null);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const listaAnimais = await servicoAnimais.listar();
-        setTodosAnimais(listaAnimais);
-        setAnimaisDisponiveis(listaAnimais.filter((a) => a.situacao === 'ativo'));
+  const carregarDados = useCallback(async () => {
+    try {
+      const listaAnimais = await servicoAnimais.listar();
+      setTodosAnimais(listaAnimais);
+      setAnimaisDisponiveis(listaAnimais.filter((a) => a.situacao === 'ativo'));
 
-        if (id) {
-          const venda = await servicoVendas.exigir(id);
-          setTipo(venda.tipo);
-          setComprador(venda.comprador);
-          setDataVenda(isoParaData(venda.data));
-          setValor(centavosParaReais(venda.valorBrutoCentavos));
-          setObservacoes(venda.observacoes ?? '');
-          if (venda.itens.length > 0) {
-            setItens(
-              venda.itens.map((it, idx) => ({
-                idTemp: String(it.id ?? idx + 1),
-                animalId: it.animalId,
-                brinco: it.brinco,
-                pesoKg: String(it.pesoKg).replace('.', ','),
-                manual:
-                  !it.animalId &&
-                  !listaAnimais.some((a) => a.brinco.toUpperCase() === it.brinco.toUpperCase()),
-              })),
-            );
-          }
+      if (id) {
+        const venda = await servicoVendas.exigir(id);
+        setTipo(venda.tipo);
+        setComprador(venda.comprador);
+        setDataVenda(isoParaData(venda.data));
+        setValor(centavosParaReais(venda.valorBrutoCentavos));
+        setObservacoes(venda.observacoes ?? '');
+        if (venda.itens.length > 0) {
+          setItens(
+            venda.itens.map((it, idx) => ({
+              idTemp: String(it.id ?? idx + 1),
+              animalId: it.animalId,
+              brinco: it.brinco,
+              pesoKg: String(it.pesoKg).replace('.', ','),
+              manual:
+                !it.animalId &&
+                !listaAnimais.some((a) => a.brinco.toUpperCase() === it.brinco.toUpperCase()),
+            })),
+          );
         }
-      } catch (causa) {
-        const msg = mensagemErro(causa);
-        setMensagemErroGeral(msg);
-        if (Platform.OS === 'web') {
-          window.alert(`Não foi possível carregar: ${msg}`);
-        } else {
-          Alert.alert('Não foi possível carregar', msg);
-        }
-      } finally {
-        setCarregando(false);
       }
-    })();
+    } catch (causa) {
+      const msg = mensagemErro(causa);
+      setMensagemErroGeral(msg);
+      if (Platform.OS === 'web') {
+        window.alert(`Não foi possível carregar: ${msg}`);
+      } else {
+        Alert.alert('Não foi possível carregar', msg);
+      }
+    } finally {
+      setCarregando(false);
+    }
   }, [id, servicoVendas, servicoAnimais]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void carregarDados();
+    }, [carregarDados]),
+  );
+
+  const atualizarAnimaisRebanho = async () => {
+    try {
+      const listaAnimais = await servicoAnimais.listar();
+      setTodosAnimais(listaAnimais);
+      setAnimaisDisponiveis(listaAnimais.filter((a) => a.situacao === 'ativo'));
+    } catch {
+      // Ignora falha de atualização momentânea
+    }
+  };
 
   // Animais do rebanho ativo que ainda não foram adicionados nesta venda
   const animaisNaoAdicionados = useMemo(() => {
@@ -172,6 +186,7 @@ export default function FormularioVenda() {
   };
 
   const abrirModalSelecao = () => {
+    void atualizarAnimaisRebanho();
     setTrocandoItemTempId(null);
     setBuscaModal('');
     setFiltroSexoModal('todos');
@@ -180,6 +195,7 @@ export default function FormularioVenda() {
   };
 
   const abrirModalParaTroca = (idTemp: string) => {
+    void atualizarAnimaisRebanho();
     setTrocandoItemTempId(idTemp);
     setBuscaModal('');
     setFiltroSexoModal('todos');
@@ -548,7 +564,12 @@ export default function FormularioVenda() {
                   titulo="Escolher gado do rebanho"
                   onPress={abrirModalSelecao}
                 />
-              ) : null}
+              ) : (
+                <Botao
+                  titulo="+ Cadastrar animal no Gado"
+                  onPress={() => router.push('/animal-form')}
+                />
+              )}
               <Botao
                 titulo="+ Digitar brinco manual"
                 variante="secundario"

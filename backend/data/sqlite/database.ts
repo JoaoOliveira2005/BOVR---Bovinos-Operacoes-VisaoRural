@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const VERSAO_BANCO = 3;
+const VERSAO_BANCO = 4;
 
 const MIGRACAO_1 = `
 CREATE TABLE IF NOT EXISTS grass_types (
@@ -128,6 +128,34 @@ CREATE INDEX IF NOT EXISTS idx_sale_items_animal ON sale_items(animal_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_ear_tag ON sale_items(ear_tag COLLATE NOCASE);
 `;
 
+const MIGRACAO_4 = `
+CREATE TRIGGER IF NOT EXISTS trg_cattle_death_remove_from_planned_sales
+AFTER UPDATE OF status ON cattle
+WHEN NEW.status = 'morto'
+BEGIN
+  DELETE FROM sale_items
+  WHERE (animal_id = NEW.id OR trim(ear_tag) = trim(NEW.ear_tag) COLLATE NOCASE)
+    AND sale_id IN (SELECT id FROM sales WHERE sale_type = 'planejada');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_cattle_delete_remove_from_planned_sales
+AFTER DELETE ON cattle
+BEGIN
+  DELETE FROM sale_items
+  WHERE (animal_id = OLD.id OR trim(ear_tag) = trim(OLD.ear_tag) COLLATE NOCASE)
+    AND sale_id IN (SELECT id FROM sales WHERE sale_type = 'planejada');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_cleanup_empty_planned_sales
+AFTER DELETE ON sale_items
+BEGIN
+  DELETE FROM sales
+  WHERE id = OLD.sale_id
+    AND sale_type = 'planejada'
+    AND NOT EXISTS (SELECT 1 FROM sale_items WHERE sale_id = OLD.sale_id);
+END;
+`;
+
 export async function inicializarBanco(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   await db.execAsync('PRAGMA foreign_keys = ON;');
@@ -141,6 +169,7 @@ export async function inicializarBanco(db: SQLiteDatabase): Promise<void> {
     if (atual < 1) await db.execAsync(MIGRACAO_1);
     if (atual < 2) await db.execAsync(MIGRACAO_2);
     if (atual < 3) await db.execAsync(MIGRACAO_3);
+    if (atual < 4) await db.execAsync(MIGRACAO_4);
     await db.execAsync(`PRAGMA user_version = ${VERSAO_BANCO};`);
     await db.execAsync('COMMIT;');
   } catch (erro) {

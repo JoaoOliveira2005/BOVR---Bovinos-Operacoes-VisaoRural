@@ -11,7 +11,7 @@ import { Tela } from '../src/components/Tela';
 import { useServicoAnimais } from '../../backend/data/sqlite/cattleServices';
 import { ErroDominio, mensagemErro } from '../src/domain/errors';
 import { descreverIdade, idadeEmMeses } from '../src/features/cattle/idade';
-import type { EntradaAnimal, SexoAnimal } from '../src/features/cattle/types';
+import type { EntradaAnimal, SexoAnimal, SituacaoAnimal } from '../src/features/cattle/types';
 import { dataParaIso, isoParaData, mascararData } from '../src/lib/formato';
 import { cores, espaco, raio, tipografia } from '../src/theme/tokens';
 
@@ -35,6 +35,7 @@ export default function FormularioAnimal() {
 
   const [brinco, setBrinco] = useState('');
   const [sexo, setSexo] = useState<SexoAnimal | null>(null);
+  const [situacao, setSituacao] = useState<SituacaoAnimal>('ativo');
   const [fonteIdade, setFonteIdade] = useState<FonteIdade>('nascimento');
   const [nascimento, setNascimento] = useState('');
   const [anos, setAnos] = useState('');
@@ -59,6 +60,7 @@ export default function FormularioAnimal() {
         const animal = await servico.exigirAnimal(id);
         setBrinco(animal.brinco);
         setSexo(animal.sexo);
+        setSituacao(animal.situacao ?? 'ativo');
         setRaca(animal.raca);
         setObservacoes(animal.observacoes ?? '');
         if (animal.dataNascimento) {
@@ -111,6 +113,7 @@ export default function FormularioAnimal() {
         fonteIdade === 'estimativa' && (anos !== '' || meses !== '') ? estimativa : null,
       raca,
       observacoes: observacoes || null,
+      situacao,
     };
   };
 
@@ -350,11 +353,46 @@ export default function FormularioAnimal() {
         style={estilos.areaTexto}
       />
 
+      {id ? (
+        <View style={estilos.secaoCampo}>
+          <Seletor
+            rotulo="Situação do animal"
+            valor={situacao}
+            opcoes={[
+              { valor: 'ativo', rotulo: 'Ativo' },
+              { valor: 'morto', rotulo: 'Morto (óbito)' },
+              { valor: 'vendido', rotulo: 'Vendido' },
+              { valor: 'transferido', rotulo: 'Transferido' },
+            ]}
+            aoSelecionar={(s) => setSituacao(s)}
+          />
+          {situacao === 'morto' ? (
+            <Text style={estilos.avisoSituacao}>
+              Ao marcar como morto, o animal sairá do rebanho ativo e será desconsiderado de vendas planejadas automaticamente.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
       <Botao
         titulo={id ? 'Salvar alterações' : 'Cadastrar animal'}
         carregando={salvando}
         onPress={salvar}
       />
+      {id && situacao === 'ativo' ? (
+        <Botao
+          titulo="Registrar morte do animal"
+          variante="secundario"
+          onPress={() => {
+            setSituacao('morto');
+            if (Platform.OS === 'web') {
+              window.alert('Situação alterada para "Morto". Clique em "Salvar alterações" para confirmar a baixa.');
+            } else {
+              Alert.alert('Atenção', 'Situação alterada para "Morto". Clique em "Salvar alterações" para confirmar a baixa.');
+            }
+          }}
+        />
+      ) : null}
       {id ? <Botao titulo="Excluir animal" variante="perigo" onPress={excluir} /> : null}
       <Botao titulo="Cancelar" variante="secundario" onPress={() => router.back()} />
     </Tela>
@@ -381,6 +419,11 @@ const estilos = StyleSheet.create({
   },
   secaoCampo: {
     gap: espaco.xs,
+  },
+  avisoSituacao: {
+    ...tipografia.caption,
+    color: cores.ember,
+    marginTop: 4,
   },
   erroCampo: {
     ...tipografia.caption,

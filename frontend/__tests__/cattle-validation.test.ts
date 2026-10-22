@@ -84,15 +84,20 @@ function repositorioFake(existentes: Animal[] = []): RepositorioAnimais {
   const animais = [...existentes];
   return {
     listar: async () => animais,
+    listarAtivos: async () => animais.filter((a) => a.situacao === 'ativo'),
     obter: async (id) => animais.find((a) => a.id === id) ?? null,
     existeAtivoComBrinco: async (brinco, ignorarId) =>
       animais.some((a) => a.situacao === 'ativo' && a.id !== ignorarId && a.brinco === brinco),
     criar: async (entrada) => {
       const id = animais.length + 1;
-      animais.push({ ...entrada, id, situacao: 'ativo' });
+      animais.push({ ...entrada, id, situacao: entrada.situacao ?? 'ativo' });
       return id;
     },
     atualizar: async () => undefined,
+    marcarComoMorto: async (id) => {
+      const a = animais.find((it) => it.id === id);
+      if (a) a.situacao = 'morto';
+    },
     excluir: async (id) => {
       const idx = animais.findIndex((a) => a.id === id);
       if (idx >= 0) animais.splice(idx, 1);

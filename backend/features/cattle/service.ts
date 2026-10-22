@@ -13,7 +13,12 @@ export type DetalhesAnimal = Animal & { idade: ReturnType<typeof idadeDoAnimal> 
 export class ServicoAnimais {
   constructor(private readonly repositorio: RepositorioConsultaAnimais) {}
 
-  listar() { return this.repositorio.listar(); }
+  listar(filtro?: { situacao?: Animal['situacao'] | 'todos' }) { return this.repositorio.listar(filtro); }
+  listarAtivos() {
+    return this.repositorio.listarAtivos
+      ? this.repositorio.listarAtivos()
+      : this.repositorio.listar({ situacao: 'ativo' });
+  }
   obter(id: number) { return this.repositorio.obter(id); }
 
   async exigirAnimal(id: number): Promise<Animal> {
@@ -27,13 +32,20 @@ export class ServicoAnimais {
     if (id !== undefined) {
       const existente = await this.exigirAnimal(id);
       // Alterar um registro histórico não disputa o brinco com o animal ativo.
-      if (existente.situacao !== 'ativo') return this.repositorio.atualizar(id, valida);
+      if (existente.situacao !== 'ativo' && valida.situacao !== 'ativo') {
+        return this.repositorio.atualizar(id, valida);
+      }
     }
-    if (await this.repositorio.existeAtivoComBrinco(valida.brinco, id)) {
+    if ((valida.situacao === undefined || valida.situacao === 'ativo') &&
+        await this.repositorio.existeAtivoComBrinco(valida.brinco, id)) {
       throw new ErroDominio('duplicado',
         `Já existe um animal ativo com o brinco ${valida.brinco}. Use outro número ou altere a situação do animal que já tem esse brinco.`);
     }
     return id !== undefined ? this.repositorio.atualizar(id, valida) : this.repositorio.criar(valida);
+  }
+
+  marcarComoMorto(id: number) {
+    return this.repositorio.marcarComoMorto(id);
   }
 
   excluir(id: number) {
