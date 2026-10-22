@@ -7,11 +7,11 @@ App Android offline (10+, minSdk 29): usuário único, uma fazenda, até 500 ani
 - `docs/` — fonte de verdade dos requisitos. `Conceitos/` é rascunho local e está gitignored.
 
 ## Docs que valem (nesta ordem)
-1. `docs/Requisitos.md` (RF/RNF, P-01–P-20) + `docs/vision/DocumentoDeVisao.md` — os IDs são citados nos comentários do código.
+1. `docs/Requisitos.md` (RF/RNF, P-01–P-23) + `docs/vision/DocumentoDeVisao.md` — os IDs são citados nos comentários do código.
 2. `docs/Banco de Dados/Arquitetura.md` + `DicionarioDeDados.md` — camadas locais, convenções, seeds protegidos.
 3. `docs/Product-Backlog.md` — stories INVEST; Done exige: revisado, testes ok, 100% offline, pt-BR + `R$ 1.234,50` + `DD/MM/AAAA`, consultas ≤2s / relatórios ≤5s, dados sobrevivem a reinício.
 4. `frontend/README.md` — estado real (Pastos e Gastos funcionais; Gado, Vendas e Relatórios são placeholders) + padrão visual + pendências.
-- `DESIGN.md` NÃO está versionado. Conflito resolvido: só vendas realizadas (P-07 sobrepõe RF-21 planejadas).
+- `DESIGN.md` NÃO está versionado. Conflito P-07 × RF-21 resolvido em 13/10/2026: vendas planejadas voltaram ao escopo — venda é planejada (0) que se transforma em realizada (1); pesos em @ (P-21/P-22/P-23).
 
 ## Como contribuir
 - `cd frontend` para tudo (`npm install`, `npm run web` p/ preview, `npm run android` p/ device, `npm run typecheck`, `npm test`). Entrega é APK Android, não web.

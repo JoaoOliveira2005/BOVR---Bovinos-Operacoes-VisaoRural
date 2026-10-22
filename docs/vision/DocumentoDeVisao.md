@@ -1,5 +1,5 @@
 ### Documento de Visão
-- #### Versão do documento: (0.3)
+- #### Versão do documento: (0.3.1)
 
 # Gestão de Rebanho Bovino — Aplicativo Android Offline
 
@@ -346,7 +346,7 @@ A altura adequada deverá poder ser alterada no aplicativo, pois varia conforme 
 
 ## 12. Riscos residuais e o que NÃO fazer
 
-- **NÃO** adicionar funcionalidade de notificações para "melhorar a experiência" — contradiz o requisito RF-14/RF-21.3.
+- **NÃO** adicionar funcionalidade de notificações para "melhorar a experiência" — contradiz o requisito RF-14.
 - **NÃO** introduzir chamadas de rede ou dependência de serviços externos em nenhum módulo.
 - **NÃO** permitir múltiplos usuários sem reavaliar toda a modelagem de dados e segurança.
 - **NÃO** simplificar a qualidade do pasto removendo um dos três critérios (altura, condição, cobertura) — os três são necessários conforme RF-15.2.

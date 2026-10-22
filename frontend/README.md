@@ -210,10 +210,11 @@ a formatação é manual e determinística.
 
 ### Precisa de decisão
 
-1. ~~**P-07 conflita com RF-21.**~~ **Resolvido.** O `docs/Arquitetura.md`
-   registra a decisão do gerente: somente vendas realizadas, RF-21 / B-18
-   desconsiderados até a próxima reunião. O atalho da tela inicial já foi
-   ajustado.
+1. ~~**P-07 conflita com RF-21.**~~ **Resolvido duas vezes.** A primeira decisão
+   (somente vendas realizadas) foi **superada em 13/10/2026**: vendas planejadas
+   voltaram ao escopo. `docs/Banco de Dados/Arquitetura.md` (V1.2) registra a
+   decisão vigente: venda é planejada (0) que se transforma em realizada (1),
+   com pesos em @ (RF-21, P-21/P-22/P-23).
 
 ### Precisa de código
 
