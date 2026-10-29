@@ -25,8 +25,15 @@ function normalizar(brinco: string): string {
 }
 
 export class RepositorioAnimaisMemoria implements RepositorioAnimais {
-  async listar(): Promise<Animal[]> {
+  async listar(filtro?: { situacao?: Animal['situacao'] | 'todos' }): Promise<Animal[]> {
+    if (filtro?.situacao && filtro.situacao !== 'todos') {
+      return animais.filter((a) => a.situacao === filtro.situacao).sort((a, b) => b.id - a.id);
+    }
     return [...animais].sort((a, b) => b.id - a.id);
+  }
+
+  async listarAtivos(): Promise<Animal[]> {
+    return this.listar({ situacao: 'ativo' });
   }
 
   async obter(id: number): Promise<Animal | null> {
@@ -45,13 +52,18 @@ export class RepositorioAnimaisMemoria implements RepositorioAnimais {
 
   async criar(entrada: EntradaAnimal): Promise<number> {
     const id = proximoId++;
-    animais.push({ ...entrada, id, situacao: 'ativo' });
+    animais.push({ ...entrada, id, situacao: entrada.situacao ?? 'ativo' });
     return id;
   }
 
   async atualizar(id: number, entrada: EntradaAnimal): Promise<void> {
     const indice = animais.findIndex((animal) => animal.id === id);
     if (indice >= 0) animais[indice] = { ...animais[indice], ...entrada };
+  }
+
+  async marcarComoMorto(id: number): Promise<void> {
+    const animal = animais.find((a) => a.id === id);
+    if (animal) animal.situacao = 'morto';
   }
 
   async excluir(id: number): Promise<void> {

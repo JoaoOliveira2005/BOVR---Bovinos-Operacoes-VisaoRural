@@ -250,7 +250,7 @@ test('migra versão 2 preservando cadastros, sem inventar datas de leitura nem l
   const a = (await db.runAsync(`INSERT INTO cattle (ear_tag,sex,estimated_age_months,breed)
     VALUES ('Antigo','femea',24,'Nelore')`)).lastInsertRowId;
   await inicializarBanco(db); conectar(); await inicializarBanco(db);
-  expect((await db.getFirstAsync('PRAGMA user_version')).user_version).toBe(3);
+  expect((await db.getFirstAsync('PRAGMA user_version')).user_version).toBe(4);
   expect(await cadastro.obterPasto(1)).toMatchObject({ nome: 'Pasto antigo', qualidade: 'boa', dataLeitura: null });
   expect(await manejo.listarLeituras(1)).toEqual([]);
   expect(await db.getFirstAsync('SELECT pasture_id,herd_id FROM cattle WHERE id = ?', a))
