@@ -1,4 +1,4 @@
-# Arquitetura do BOVR — V1.2
+# Arquitetura do BOVR — V1.3
 
 O BOVR é um aplicativo Android de usuário único, totalmente offline. O sistema é
 dividido em duas camadas no próprio aparelho: o **frontend** (telas e navegação
@@ -55,12 +55,15 @@ flowchart TB
 - Expo SQLite é a única fonte persistente de dados; chaves estrangeiras ficam
   habilitadas e o banco opera em modo WAL.
 - Dinheiro é armazenado como centavos inteiros e datas como `YYYY-MM-DD`.
+- Identificadores do schema são em inglês; **valores de enum no código atual estão em
+  pt-BR** (ex.: `ativo/vendido/morto/transferido`, `macho/femea`, `verde/...`) —
+  divergência registrada como pendência de implementação, a sanar.
 - Vendas usam **tabela única** com flag `0 = planejada` / `1 = realizada`
   (RF-21, P-22); pesos em **arrobas (@)**, sem conversão com kg (RD-04).
 - As categorias Água, Ração, Mão de obra e Infraestrutura são seeds protegidos.
 - Registros auxiliares em uso não são excluídos em cascata.
 
-## Convenções de nomenclatura (V1.2)
+## Convenções de nomenclatura (V1.3)
 
 - **Banco 100% em inglês**, `snake_case`. A RNF-17 exige pt-BR só na
   **interface** — identificadores do schema nunca misturam idiomas.
@@ -75,7 +78,7 @@ flowchart TB
 - PKs surrogate `INTEGER AUTOINCREMENT`; brinco (`tag_number`) é identificador
   de negócio com `UNIQUE` parcial entre ativos, nunca PK.
 
-## DER — modelo de dados (V1.2)
+## DER — modelo de dados (V1.3)
 
 ```mermaid
 erDiagram
@@ -88,6 +91,7 @@ erDiagram
     PASTURES ||--o{ PASTURE_INSPECTIONS : "quality inspections"
     PASTURES ||--o{ PASTURE_MOVEMENTS : "as origin"
     PASTURES ||--o{ PASTURE_MOVEMENTS : "as destination"
+    PASTURES ||--o{ PASTURE_REST_PERIODS : "rest periods"
     CATTLE |o--o{ PASTURE_MOVEMENTS : "moved animal"
     HERDS |o--o{ PASTURE_MOVEMENTS : "moved herd"
     CATTLE ||--o{ REPRODUCTIVE_EVENTS : "reproductive history"
@@ -114,10 +118,10 @@ erDiagram
         INTEGER estimated_age_months "nullable, when birth unknown"
         TEXT breed
         TEXT notes "nullable"
-        INTEGER herd_id FK "nullable, one herd at a time"
-        INTEGER pasture_id FK "nullable, one pasture at a time"
+        INTEGER herd_id FK "nullable, one herd at a time (migração 3)"
+        INTEGER pasture_id FK "nullable, one pasture at a time (migração 3)"
         TEXT status "active|sold|dead|transferred"
-        INTEGER mother_id "self FK nullable, calf link"
+        INTEGER mother_id "self FK nullable, calf link — prevista (RF-10)"
         TEXT created_at
         TEXT updated_at
     }
@@ -139,6 +143,9 @@ erDiagram
         TEXT name
         REAL area_hectares
         INTEGER grass_type_id FK "RESTRICT"
+        REAL current_height_cm "measured height (leitura atual)"
+        TEXT grass_condition "green|partly_dry|dry"
+        INTEGER coverage_percent "0 to 100"
         TEXT created_at
         TEXT updated_at
     }
@@ -146,18 +153,29 @@ erDiagram
         INTEGER id PK
         INTEGER pasture_id FK "RESTRICT"
         TEXT inspected_on "field visit date"
+        INTEGER grass_type_id FK "RESTRICT, snapshot da faixa ideal"
+        REAL min_height_cm "ideal minimum (snapshot)"
+        REAL max_height_cm "ideal maximum (snapshot)"
         REAL grass_height_cm "measured height"
         TEXT grass_condition "green|partly_dry|dry"
         INTEGER coverage_percent "0 to 100"
         TEXT quality "good|fair|poor, computed at save"
+        TEXT created_at
     }
     PASTURE_MOVEMENTS {
         INTEGER id PK
-        INTEGER cattle_id FK "nullable, one of cattle/herd"
-        INTEGER herd_id FK "nullable, one of cattle/herd"
-        INTEGER origin_pasture_id FK
-        INTEGER destination_pasture_id FK "different from origin"
+        INTEGER cattle_id FK "NOT NULL, one row per animal"
+        INTEGER herd_id FK "nullable, batch context (herd moved)"
+        INTEGER origin_pasture_id FK "NOT NULL"
+        INTEGER destination_pasture_id FK "NOT NULL, different from origin"
         TEXT moved_on "YYYY-MM-DD"
+        TEXT created_at
+    }
+    PASTURE_REST_PERIODS {
+        INTEGER id PK
+        INTEGER pasture_id FK "RESTRICT, NOT NULL"
+        TEXT started_on "YYYY-MM-DD"
+        TEXT ended_on "nullable, >= started_on"
     }
     REPRODUCTIVE_EVENTS {
         INTEGER id PK
@@ -227,7 +245,7 @@ erDiagram
 **Legenda do DER (pé-de-galinha):** `||` = exatamente um · `o{` = zero ou
 mais · `o|` = zero ou um · `}o` = zero ou mais (lado esquerdo). As
 cardinalidades do diagrama espelham a tabela em
-`### Cardinalidades (V1.2)` — qualquer divergência entre os dois é erro.
+`### Cardinalidades (V1.3)` — qualquer divergência entre os dois é erro.
 
 ### Regras de integridade do DER
 
@@ -247,12 +265,21 @@ cardinalidades do diagrama espelham a tabela em
   **cálculo real** mas permanece como registro planejado (RF-21.3).
 - Única exceção de cascata: `sale_items.sale_id → ON DELETE CASCADE` (item sem
   venda não tem sentido sozinho).
-- `pasture_movements` exige exatamente um dos dois (`cattle_id` ou `herd_id`)
-  e `destination_pasture_id ≠ origin_pasture_id` (via `CHECK`).
+- `pasture_movements`: **uma linha por animal** (`cattle_id` NOT NULL); `herd_id`
+  é apenas contexto do lote que originou a movimentação. Preserva a origem
+  individual quando um lote se divide entre pastos (melhor para RF-18.2/18.3).
+  `destination_pasture_id ≠ origin_pasture_id` (via `CHECK`).
+- `pasture_rest_periods`: período de descanso de um pasto, com `ended_on` NULL
+  enquanto o pasto estiver descansando. Índice único parcial
+  `idx_pasture_rest_open` garante **no máximo um descanso aberto por pasto**.
+- Trigger `cattle_status_requires_pasture_exit`: `BEFORE UPDATE OF status ON cattle`
+  aborta se `NEW.status <> 'ativo' AND NEW.pasture_id IS NOT NULL` — obriga
+  saída datada antes de vender/morrer/transferir, para não perder o início do
+  descanso (RF-18.3).
 - `pasture_inspections.quality` é gravada a cada vistoria (histórico RF-15.3),
   calculada de altura × condição × cobertura (RF-15.2).
 
-### Cardinalidades (V1.2)
+### Cardinalidades (V1.3)
 
 Regra aplicada: 1:N = FK no lado N, sem tabela extra · N:N = tabela associativa.
 
@@ -266,8 +293,8 @@ Regra aplicada: 1:N = FK no lado N, sem tabela extra · N:N = tabela associativa
 | 6 | `pastures` ↔ `pasture_inspections` | 1:N | FK `pasture_inspections.pasture_id` NOT NULL, `RESTRICT` | RF-15.3 |
 | 7 | `pastures` ↔ `pasture_movements` (origem) | 1:N | FK `origin_pasture_id` NOT NULL | RF-17.1 |
 | 8 | `pastures` ↔ `pasture_movements` (destino) | 1:N | FK `destination_pasture_id` NOT NULL, `≠ origem` | RF-17.1 |
-| 9 | `cattle` ↔ `pasture_movements` | 1:N condicional | FK `cattle_id` anulável; XOR com `herd_id` via `CHECK` | RF-17 |
-| 10 | `herds` ↔ `pasture_movements` | 1:N condicional | FK `herd_id` anulável; XOR com `cattle_id` via `CHECK` | RF-17 |
+| 9 | `cattle` ↔ `pasture_movements` | 1:N | FK `cattle_id` NOT NULL, `RESTRICT` (1 linha por animal) | RF-17 |
+| 10 | `herds` ↔ `pasture_movements` | 1:N opcional | FK `herd_id` anulável, `RESTRICT` (contexto do lote) | RF-17 |
 | 11 | `cattle` ↔ `reproductive_events` | 1:N | FK `cattle_id` NOT NULL, `RESTRICT` | RF-08 |
 | 12 | `cattle` ↔ `vaccinations` | 1:N | FK `cattle_id` NOT NULL, `RESTRICT` | RF-11.3 |
 | 13 | `cattle` ↔ `health_events` | 1:N | FK `cattle_id` NOT NULL, `RESTRICT` | RF-12 |
@@ -275,22 +302,25 @@ Regra aplicada: 1:N = FK no lado N, sem tabela extra · N:N = tabela associativa
 | 15 | `expense_categories` ↔ `expenses` | 1:N | FK `expenses.category_id` NOT NULL, `RESTRICT` | RF-22.1 |
 | 16 | `expense_categories` ↔ `expense_subcategories` | 1:N | FK `subcategories.category_id` NOT NULL, `RESTRICT` | RF-22.4 |
 | 17 | `expense_subcategories` ↔ `expenses` | 1:N opcional | FK `expenses.subcategory_id` anulável, `RESTRICT` | RF-22.4 |
+| 18 | `pastures` ↔ `pasture_rest_periods` | 1:N | FK `pasture_id` NOT NULL, `RESTRICT`; máx. 1 aberto por pasto | RF-18.3 |
 
 Nenhum relacionamento 1:1 no modelo — nenhuma entidade é mera extensão de
-outra. O item 9/10 é o único não-canônico (FK condicional com XOR em uma tabela
-única, preservando o histórico de rotação do pasto — RF-17.2 — numa consulta só).
+outra. O item 18 é o único com restrição de unicidade parcial (índice
+`idx_pasture_rest_open`, máx. 1 descanso aberto por pasto).
 
-## Rastreabilidade RF → tabela (V1.2)
+## Rastreabilidade RF → tabela (V1.3)
 
 | Requisito | Tabelas |
 |---|---|
 | RF-01–RF-07 (gado, lotes) | `cattle`, `herds`, `herd_memberships` |
-| RF-08–RF-10 (reprodução) | `reproductive_events`, `cattle.mother_id` |
+| RF-08–RF-10 (reprodução) | `reproductive_events`, `cattle.mother_id` (prevista) |
 | RF-11 (vacinação) | `vaccinations` |
 | RF-12–RF-13 (saúde) | `health_events` |
 | RF-15–RF-16 (pastos, capim) | `pastures`, `grass_types`, `pasture_inspections` |
-| RF-17 (movimentação) | `pasture_movements` |
-| RF-18 (lotação, permanência, descanso) | `cattle`, `pasture_movements`, `pasture_inspections` (consultas) |
+| RF-17 (movimentação) | `pasture_movements` (1 linha por animal, `herd_id` contexto) |
+| RF-18.1 (lotação) | `cattle.pasture_id`, `pasture_movements` |
+| RF-18.2 (permanência) | `cattle.pasture_id`, `pasture_movements` |
+| RF-18.3 (descanso) | `pasture_rest_periods` (máx. 1 aberto por pasto) |
 | RF-19–RF-20 (vendas) | `sales`, `sale_items` |
 | RF-21 (planejada → realizada, flag 0/1) | `sales.status`, `sale_items` (`planned_*` → `actual_*`), `cattle.status` |
 | RF-22–RF-24 (gastos) | `expense_categories`, `expense_subcategories`, `expenses` |
@@ -299,7 +329,7 @@ outra. O item 9/10 é o único não-canônico (FK condicional com XOR em uma tab
 | RF-31–RF-36 (offline, backup) | `bovr.db` local; backup/restauração fora do DER |
 | RNF-12/RNF-13 (PIN, proteção) | fora do DER — pendentes P-12/P-18 |
 
-## Índices previstos (V1.2)
+## Índices previstos (V1.3)
 
 - `UNIQUE` parcial: `cattle(tag_number) WHERE status = 'active'`.
 - `UNIQUE`: `grass_types(name)`, `herds(name)`, `expense_categories(name)`,
@@ -308,6 +338,9 @@ outra. O item 9/10 é o único não-canônico (FK condicional com XOR em uma tab
   `herd_memberships(cattle_id)`, `vaccinations(cattle_id, given_on)`,
   `health_events(cattle_id, status)`, `pasture_inspections(pasture_id, inspected_on)`,
   `pasture_movements(destination_pasture_id, moved_on)`,
+  `pasture_movements(herd_id, moved_on)`,
+  `pasture_rest_periods(pasture_id) WHERE ended_on IS NULL`,
+  `pasture_rest_periods(pasture_id, started_on DESC)`,
   `sale_items(sale_id)`, `sale_items(cattle_id)`,
   `sales(status, sold_on)`, `expenses(expense_date DESC)`, `expenses(category_id)`.
 - Composto leitura financeira: `expenses(category_id, expense_date)`.
