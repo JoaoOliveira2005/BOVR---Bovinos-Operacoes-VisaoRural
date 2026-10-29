@@ -8,7 +8,7 @@ const HOJE = new Date(2026, 8, 24); // 24/09/2026
 
 const valido: EntradaAnimal = {
   brinco: '1234',
-  sexo: 'macho',
+  sexo: 'male',
   dataNascimento: '2024-03-10',
   idadeEstimadaMeses: null,
   raca: 'Nelore',
@@ -87,17 +87,18 @@ function repositorioFake(existentes: Animal[] = []): RepositorioConsultaAnimais 
     consultarPorBrinco: async (brinco) => animais.filter((a) => a.brinco === brinco),
     obter: async (id) => animais.find((a) => a.id === id) ?? null,
     existeAtivoComBrinco: async (brinco, ignorarId) =>
-      animais.some((a) => a.situacao === 'ativo' && a.id !== ignorarId && a.brinco === brinco),
+      animais.some((a) => a.situacao === 'active' && a.id !== ignorarId && a.brinco === brinco),
     criar: async (entrada) => {
       const id = animais.length + 1;
-      animais.push({ ...entrada, id, situacao: 'ativo' });
+      animais.push({ ...entrada, id, situacao: 'active' });
       return id;
     },
     atualizar: async () => undefined,
+    excluir: async () => undefined,
   };
 }
 
-const ativo: Animal = { ...valido, id: 1, situacao: 'ativo' };
+const ativo: Animal = { ...valido, id: 1, situacao: 'active' };
 
 describe('brinco duplicado (RF-01.1, RF-01.2)', () => {
   it('impede cadastrar outro animal ativo com o mesmo brinco', async () => {
@@ -112,7 +113,7 @@ describe('brinco duplicado (RF-01.1, RF-01.2)', () => {
   });
 
   it('permite reaproveitar o brinco de um animal vendido (RF-06.1)', async () => {
-    const servico = new ServicoAnimais(repositorioFake([{ ...ativo, situacao: 'vendido' }]));
+    const servico = new ServicoAnimais(repositorioFake([{ ...ativo, situacao: 'sold' }]));
     await expect(servico.salvar({ ...valido, brinco: '1234' })).resolves.toBe(2);
   });
 

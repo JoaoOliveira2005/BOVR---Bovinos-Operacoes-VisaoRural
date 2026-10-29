@@ -6,7 +6,7 @@ import type { RepositorioConsultaAnimais } from '../../features/cattle/service';
 
 type LinhaAnimal = {
   id: number;
-  ear_tag: string;
+  tag_number: string;
   sex: Animal['sexo'];
   birth_date: string | null;
   estimated_age_months: number | null;
@@ -15,12 +15,12 @@ type LinhaAnimal = {
   status: Animal['situacao'];
 };
 
-const SELECT_ANIMAL = `SELECT id, ear_tag, sex, birth_date, estimated_age_months,
+const SELECT_ANIMAL = `SELECT id, tag_number, sex, birth_date, estimated_age_months,
   breed, notes, status FROM cattle`;
 
 function mapear(linha: LinhaAnimal): Animal {
   return {
-    id: linha.id, brinco: linha.ear_tag, sexo: linha.sex,
+    id: linha.id, brinco: linha.tag_number, sexo: linha.sex,
     dataNascimento: linha.birth_date, idadeEstimadaMeses: linha.estimated_age_months,
     raca: linha.breed, observacoes: linha.notes, situacao: linha.status,
   };
@@ -49,15 +49,15 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
 
   async consultarPorBrinco(brinco: string): Promise<Animal[]> {
     const linhas = await this.db.getAllAsync<LinhaAnimal>(
-      `${SELECT_ANIMAL} WHERE trim(ear_tag) = ? COLLATE NOCASE
-       ORDER BY (status = 'ativo') DESC, id DESC`, brinco.trim(),
+      `${SELECT_ANIMAL} WHERE trim(tag_number) = ? COLLATE NOCASE
+       ORDER BY (status = 'active') DESC, id DESC`, brinco.trim(),
     );
     return linhas.map(mapear);
   }
 
   async existeAtivoComBrinco(brinco: string, ignorarId?: number): Promise<boolean> {
     const linha = await this.db.getFirstAsync<{ id: number }>(
-      `SELECT id FROM cattle WHERE status = 'ativo' AND trim(ear_tag) = ? COLLATE NOCASE
+      `SELECT id FROM cattle WHERE status = 'active' AND trim(tag_number) = ? COLLATE NOCASE
        AND (? IS NULL OR id <> ?) LIMIT 1`, brinco.trim(), ignorarId ?? null, ignorarId ?? null,
     );
     return linha !== null;
@@ -67,7 +67,7 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
     const animal = validarAnimal(entrada);
     try {
       const resultado = await this.db.runAsync(
-        `INSERT INTO cattle (ear_tag, sex, birth_date, estimated_age_months, breed, notes)
+        `INSERT INTO cattle (tag_number, sex, birth_date, estimated_age_months, breed, notes)
          VALUES (?, ?, ?, ?, ?, ?)`,
         animal.brinco, animal.sexo, animal.dataNascimento, animal.idadeEstimadaMeses,
         animal.raca, animal.observacoes,
@@ -80,7 +80,7 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
     const animal = validarAnimal(entrada);
     try {
       const resultado = await this.db.runAsync(
-        `UPDATE cattle SET ear_tag = ?, sex = ?, birth_date = ?, estimated_age_months = ?,
+        `UPDATE cattle SET tag_number = ?, sex = ?, birth_date = ?, estimated_age_months = ?,
          breed = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         animal.brinco, animal.sexo, animal.dataNascimento, animal.idadeEstimadaMeses,
         animal.raca, animal.observacoes, id,

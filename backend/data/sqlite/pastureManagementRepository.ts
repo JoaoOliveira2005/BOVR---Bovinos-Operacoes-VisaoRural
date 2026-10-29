@@ -82,7 +82,7 @@ export class RepositorioManejoPastosSqlite implements RepositorioManejoPastos {
     return this.transacao(async (db) => {
       const animal = await db.getFirstAsync<AnimalLocal>('SELECT id, pasture_id, status FROM cattle WHERE id = ?', animalId);
       if (!animal) throw new ErroDominio('nao_encontrado', 'Animal não encontrado.');
-      if (animal.status !== 'ativo') throw new ErroDominio('validacao', 'Somente animais ativos podem ser movimentados.');
+      if (animal.status !== 'active') throw new ErroDominio('validacao', 'Somente animais ativos podem ser movimentados.');
       return this.movimentar(db, [animal], null, entrada);
     });
   }
@@ -93,7 +93,7 @@ export class RepositorioManejoPastosSqlite implements RepositorioManejoPastos {
         throw new ErroDominio('nao_encontrado', 'Lote não encontrado.');
       }
       const animais = await db.getAllAsync<AnimalLocal>(
-        "SELECT id, pasture_id, status FROM cattle WHERE herd_id = ? AND status = 'ativo' ORDER BY id", loteId,
+        "SELECT id, pasture_id, status FROM cattle WHERE herd_id = ? AND status = 'active' ORDER BY id", loteId,
       );
       if (!animais.length) throw new ErroDominio('validacao', 'O lote não possui animais ativos.');
       return this.movimentar(db, animais, loteId, entrada);
@@ -190,13 +190,13 @@ export class RepositorioManejoPastosSqlite implements RepositorioManejoPastos {
     // A leitura do painel usa a mesma transação para não misturar dois movimentos.
     return this.transacao(async (db) => {
       await exigirPasto(db, pastoId);
-      const linhas = await db.getAllAsync<{ id: number; ear_tag: string; herd_id: number | null; moved_on: string }>(
-        `SELECT c.id, c.ear_tag, c.herd_id, m.moved_on FROM cattle c
+      const linhas = await db.getAllAsync<{ id: number; tag_number: string; herd_id: number | null; moved_on: string }>(
+        `SELECT c.id, c.tag_number, c.herd_id, m.moved_on FROM cattle c
          JOIN pasture_movements m ON m.id = (SELECT MAX(id) FROM pasture_movements WHERE cattle_id = c.id)
-         WHERE c.pasture_id = ? AND c.status = 'ativo' ORDER BY c.ear_tag COLLATE NOCASE`, pastoId,
+         WHERE c.pasture_id = ? AND c.status = 'active' ORDER BY c.tag_number COLLATE NOCASE`, pastoId,
       );
       const animais = linhas.map((l) => ({
-        animalId: l.id, brinco: l.ear_tag, loteId: l.herd_id,
+        animalId: l.id, brinco: l.tag_number, loteId: l.herd_id,
         dataEntrada: l.moved_on, diasPermanencia: diasEntre(l.moved_on, referencia),
       }));
       const lotes = new Map<number, PainelPasto['lotes'][number]>();

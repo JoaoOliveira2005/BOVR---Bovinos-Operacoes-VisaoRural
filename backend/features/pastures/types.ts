@@ -1,5 +1,5 @@
-export type CondicaoCapim = 'verde' | 'parcialmente_seco' | 'seco';
-export type QualidadePasto = 'boa' | 'regular' | 'ruim';
+export type CondicaoCapim = 'green' | 'partly_dry' | 'dry';
+export type QualidadePasto = 'good' | 'fair' | 'poor';
 
 export type EntradaLeituraPasto = {
   pastoId: number;

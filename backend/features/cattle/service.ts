@@ -27,7 +27,7 @@ export class ServicoAnimais {
     if (id !== undefined) {
       const existente = await this.exigirAnimal(id);
       // Alterar um registro histórico não disputa o brinco com o animal ativo.
-      if (existente.situacao !== 'ativo') return this.repositorio.atualizar(id, valida);
+      if (existente.situacao !== 'active') return this.repositorio.atualizar(id, valida);
     }
     if (await this.repositorio.existeAtivoComBrinco(valida.brinco, id)) {
       throw new ErroDominio('duplicado',

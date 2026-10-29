@@ -26,7 +26,7 @@ export function validarAnimal(entrada: EntradaAnimal, hoje = new Date()): Entrad
     throw new ErroDominio('validacao', 'Informe o número do brinco: é por ele que o animal é identificado.');
   }
 
-  if (entrada.sexo !== 'macho' && entrada.sexo !== 'femea') {
+  if (entrada.sexo !== 'male' && entrada.sexo !== 'female') {
     throw new ErroDominio('validacao', 'Selecione o sexo do animal: macho ou fêmea.');
   }
 

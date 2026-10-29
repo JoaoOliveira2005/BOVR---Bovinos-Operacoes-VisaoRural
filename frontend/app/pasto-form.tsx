@@ -22,7 +22,7 @@ export default function FormularioPasto() {
   const [tipos, setTipos] = useState<TipoCapim[]>([]);
   const [nome, setNome] = useState(''); const [area, setArea] = useState('');
   const [tipoId, setTipoId] = useState<number | null>(null); const [altura, setAltura] = useState('');
-  const [condicao, setCondicao] = useState<CondicaoCapim>('verde'); const [cobertura, setCobertura] = useState('');
+  const [condicao, setCondicao] = useState<CondicaoCapim>('green'); const [cobertura, setCobertura] = useState('');
   const [carregando, setCarregando] = useState(true); const [salvando, setSalvando] = useState(false);
 
   useEffect(() => { void (async () => {
@@ -56,7 +56,7 @@ export default function FormularioPasto() {
         <Campo rotulo="Área (ha)" value={area} onChangeText={setArea} keyboardType="decimal-pad" placeholder="0,00" />
         <Seletor rotulo="Tipo de capim" valor={tipoId} opcoes={opcoesTipos} aoSelecionar={setTipoId} />
         <Campo rotulo="Altura atual (cm)" value={altura} onChangeText={setAltura} keyboardType="decimal-pad" placeholder="0,0" />
-        <Seletor rotulo="Condição do capim" valor={condicao} opcoes={[{ valor: 'verde', rotulo: 'Verde' }, { valor: 'parcialmente_seco', rotulo: 'Parcialmente seco' }, { valor: 'seco', rotulo: 'Seco' }]} aoSelecionar={setCondicao} />
+        <Seletor rotulo="Condição do capim" valor={condicao} opcoes={[{ valor: 'green', rotulo: 'Verde' }, { valor: 'partly_dry', rotulo: 'Parcialmente seco' }, { valor: 'dry', rotulo: 'Seco' }]} aoSelecionar={setCondicao} />
         <Campo rotulo="Cobertura do solo (%)" value={cobertura} onChangeText={setCobertura} keyboardType="number-pad" placeholder="0 a 100" />
         <Botao titulo={id ? 'Salvar alterações' : 'Cadastrar pasto'} carregando={salvando} onPress={salvar} />
       </>}

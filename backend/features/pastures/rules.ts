@@ -28,7 +28,7 @@ export function validarMedicao(entrada: {
   if (!Number.isFinite(entrada.alturaAtualCm) || entrada.alturaAtualCm < 0) {
     throw new ErroDominio('validacao', 'A altura atual deve ser um número maior ou igual a zero.');
   }
-  if (!['verde', 'parcialmente_seco', 'seco'].includes(entrada.condicaoCapim)) {
+  if (!['green', 'partly_dry', 'dry'].includes(entrada.condicaoCapim)) {
     throw new ErroDominio('validacao', 'Selecione uma condição válida para o capim.');
   }
   if (!Number.isInteger(entrada.coberturaPercentual) || entrada.coberturaPercentual < 0 || entrada.coberturaPercentual > 100) {
@@ -39,8 +39,8 @@ export function validarMedicao(entrada: {
 export function classificarQualidade(
   altura: number, condicao: CondicaoCapim, cobertura: number, minima: number, maxima: number,
 ): QualidadePasto {
-  const falhas = Number(altura < minima || altura > maxima) + Number(condicao !== 'verde') + Number(cobertura < 80);
-  return falhas === 0 ? 'boa' : falhas === 1 ? 'regular' : 'ruim';
+  const falhas = Number(altura < minima || altura > maxima) + Number(condicao !== 'green') + Number(cobertura < 80);
+  return falhas === 0 ? 'good' : falhas === 1 ? 'fair' : 'poor';
 }
 
 // Diferença entre datas de calendário; independe de fuso horário/horário de verão.

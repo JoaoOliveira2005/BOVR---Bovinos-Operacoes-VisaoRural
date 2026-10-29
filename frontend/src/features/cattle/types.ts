@@ -6,10 +6,10 @@
  * tradução acontece no repositório, não aqui.
  */
 
-export type SexoAnimal = 'macho' | 'femea';
+export type SexoAnimal = 'male' | 'female';
 
 /** RF-06 — situação do animal. Vendidos, mortos e transferidos ficam no histórico (RF-06.1). */
-export type SituacaoAnimal = 'ativo' | 'vendido' | 'morto' | 'transferido';
+export type SituacaoAnimal = 'active' | 'sold' | 'dead' | 'transferred';
 
 export type Animal = {
   id: number;

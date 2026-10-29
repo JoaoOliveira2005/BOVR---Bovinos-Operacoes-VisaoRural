@@ -16,7 +16,7 @@ describe('validação de tipos de capim', () => {
 describe('validação de pastos', () => {
   const valido = {
     nome: 'Pasto Norte', areaHectares: 12.5, tipoCapimId: 1,
-    alturaAtualCm: 25, condicaoCapim: 'verde' as const, coberturaPercentual: 80,
+    alturaAtualCm: 25, condicaoCapim: 'green' as const, coberturaPercentual: 80,
   };
 
   it('aceita cobertura nos limites', () => {

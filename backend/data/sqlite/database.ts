@@ -14,11 +14,11 @@ CREATE TABLE IF NOT EXISTS grass_types (
 
 CREATE TABLE IF NOT EXISTS pastures (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
+  name TEXT NOT NULL COLLATE NOCASE UNIQUE,
   area_hectares REAL NOT NULL CHECK (area_hectares > 0),
   grass_type_id INTEGER NOT NULL,
   current_height_cm REAL NOT NULL CHECK (current_height_cm >= 0),
-  grass_condition TEXT NOT NULL CHECK (grass_condition IN ('verde', 'parcialmente_seco', 'seco')),
+  grass_condition TEXT NOT NULL CHECK (grass_condition IN ('green', 'partly_dry', 'dry')),
   coverage_percent INTEGER NOT NULL CHECK (coverage_percent BETWEEN 0 AND 100),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -74,8 +74,8 @@ INSERT OR IGNORE INTO expense_categories (name, is_system) VALUES ('Infraestrutu
 const MIGRACAO_2 = `
 CREATE TABLE IF NOT EXISTS cattle (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ear_tag TEXT NOT NULL COLLATE NOCASE CHECK (length(trim(ear_tag)) > 0),
-  sex TEXT NOT NULL CHECK (sex IN ('macho', 'femea')),
+  tag_number TEXT NOT NULL COLLATE NOCASE CHECK (length(trim(tag_number)) > 0),
+  sex TEXT NOT NULL CHECK (sex IN ('male', 'female')),
   birth_date TEXT,
   estimated_age_months INTEGER CHECK (
     estimated_age_months IS NULL OR
@@ -83,17 +83,17 @@ CREATE TABLE IF NOT EXISTS cattle (
   ),
   breed TEXT NOT NULL CHECK (length(trim(breed)) > 0),
   notes TEXT,
-  status TEXT NOT NULL DEFAULT 'ativo'
-    CHECK (status IN ('ativo', 'vendido', 'morto', 'transferido')),
+  status TEXT NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active', 'sold', 'dead', 'transferred')),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CHECK ((birth_date IS NOT NULL AND estimated_age_months IS NULL) OR
          (birth_date IS NULL AND estimated_age_months IS NOT NULL))
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_cattle_active_ear_tag
-  ON cattle(trim(ear_tag) COLLATE NOCASE) WHERE status = 'ativo';
-CREATE INDEX IF NOT EXISTS idx_cattle_ear_tag
-  ON cattle(trim(ear_tag) COLLATE NOCASE);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cattle_active_tag_number
+  ON cattle(trim(tag_number) COLLATE NOCASE) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_cattle_tag_number
+  ON cattle(trim(tag_number) COLLATE NOCASE);
 `;
 
 const MIGRACAO_3 = `
@@ -117,9 +117,9 @@ CREATE TABLE pasture_inspections (
   min_height_cm REAL NOT NULL CHECK (min_height_cm >= 0),
   max_height_cm REAL NOT NULL CHECK (max_height_cm >= min_height_cm),
   grass_height_cm REAL NOT NULL CHECK (grass_height_cm >= 0),
-  grass_condition TEXT NOT NULL CHECK (grass_condition IN ('verde', 'parcialmente_seco', 'seco')),
+  grass_condition TEXT NOT NULL CHECK (grass_condition IN ('green', 'partly_dry', 'dry')),
   coverage_percent INTEGER NOT NULL CHECK (typeof(coverage_percent) = 'integer' AND coverage_percent BETWEEN 0 AND 100),
-  quality TEXT NOT NULL CHECK (quality IN ('boa', 'regular', 'ruim')),
+  quality TEXT NOT NULL CHECK (quality IN ('good', 'fair', 'poor')),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_pasture_inspections_date ON pasture_inspections(pasture_id, inspected_on DESC, id DESC);
@@ -153,7 +153,7 @@ CREATE INDEX idx_pasture_rest_date ON pasture_rest_periods(pasture_id, started_o
 -- A baixa precisa passar pela saída datada para não perder a rotação/descanso.
 CREATE TRIGGER cattle_status_requires_pasture_exit
 BEFORE UPDATE OF status ON cattle
-WHEN NEW.status <> 'ativo' AND NEW.pasture_id IS NOT NULL
+WHEN NEW.status <> 'active' AND NEW.pasture_id IS NOT NULL
 BEGIN
   SELECT RAISE(ABORT, 'Retire o animal do pasto antes de alterar sua situação.');
 END;

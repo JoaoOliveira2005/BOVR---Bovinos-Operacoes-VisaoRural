@@ -16,12 +16,12 @@ describe('componentes de formulário', () => {
     const tela = await render(
       <Seletor
         rotulo="Condição"
-        valor="verde"
-        opcoes={[{ valor: 'verde', rotulo: 'Verde' }, { valor: 'seco', rotulo: 'Seco' }]}
+        valor="green"
+        opcoes={[{ valor: 'green', rotulo: 'Verde' }, { valor: 'dry', rotulo: 'Seco' }]}
         aoSelecionar={selecionar}
       />,
     );
     fireEvent.press(tela.getByRole('radio', { name: 'Seco' }));
-    expect(selecionar).toHaveBeenCalledWith('seco');
+    expect(selecionar).toHaveBeenCalledWith('dry');
   });
 });

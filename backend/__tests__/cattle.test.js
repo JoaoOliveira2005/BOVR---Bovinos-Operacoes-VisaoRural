@@ -22,7 +22,7 @@ function abrir(caminho) {
 }
 
 const entrada = {
-  brinco: 'AB-123', sexo: 'femea', dataNascimento: '2024-03-10',
+  brinco: 'AB-123', sexo: 'female', dataNascimento: '2024-03-10',
   idadeEstimadaMeses: null, raca: 'Nelore', observacoes: 'Matriz',
 };
 const hoje = new Date(2026, 8, 29);
@@ -49,7 +49,7 @@ test('salva todos os dados e consulta pelo brinco após fechar e reabrir o banco
   await inicializarBanco(db);
   const reaberto = new ServicoAnimais(new RepositorioAnimaisSqlite(db));
   await expect(reaberto.consultarPorBrinco(' ab-123 ', hoje)).resolves.toEqual([
-    { ...entrada, id, situacao: 'ativo', idade: { meses: 30, estimada: false } },
+    { ...entrada, id, situacao: 'active', idade: { meses: 30, estimada: false } },
   ]);
 });
 
@@ -78,7 +78,7 @@ test('o índice do banco impede duplicidade mesmo sem a checagem do serviço', a
   await expect(repo.criar({ ...entrada, brinco: 'ab-123' }))
     .rejects.toMatchObject({ codigo: 'duplicado' });
   await expect(db.runAsync(
-    "INSERT INTO cattle (ear_tag, sex, estimated_age_months, breed) VALUES (?, 'macho', 12, 'Nelore')",
+    "INSERT INTO cattle (tag_number, sex, estimated_age_months, breed) VALUES (?, 'male', 12, 'Nelore')",
     ' AB-123 ',
   )).rejects.toThrow(/UNIQUE constraint failed/);
 });
@@ -92,19 +92,19 @@ test('dois cadastros concorrentes resultam em um único animal ativo', async () 
   expect(await repo.listar()).toHaveLength(1);
 });
 
-test.each(['vendido', 'morto', 'transferido'])('permite reutilizar brinco de animal %s e preserva os detalhes históricos', async (situacao) => {
+test.each(['sold', 'dead', 'transferred'])('permite reutilizar brinco de animal %s e preserva os detalhes históricos', async (situacao) => {
   const anterior = await servico.salvar(entrada);
   await db.runAsync('UPDATE cattle SET status = ? WHERE id = ?', situacao, anterior);
   const atual = await servico.salvar({ ...entrada, dataNascimento: null, idadeEstimadaMeses: 18 });
   const encontrados = await servico.consultarPorBrinco('AB-123', hoje);
-  expect(encontrados.map((a) => [a.id, a.situacao])).toEqual([[atual, 'ativo'], [anterior, situacao]]);
+  expect(encontrados.map((a) => [a.id, a.situacao])).toEqual([[atual, 'active'], [anterior, situacao]]);
   expect(encontrados[0].idade).toEqual({ meses: 18, estimada: true });
   await servico.salvar({ ...entrada, observacoes: 'Histórico corrigido' }, anterior);
   await expect(servico.obter(anterior)).resolves.toMatchObject({
     situacao, observacoes: 'Histórico corrigido',
   });
   // Nem uma reativação direta pode criar dois ativos com o mesmo brinco.
-  await expect(db.runAsync("UPDATE cattle SET status = 'ativo' WHERE id = ?", anterior))
+  await expect(db.runAsync("UPDATE cattle SET status = 'active' WHERE id = ?", anterior))
     .rejects.toThrow(/UNIQUE constraint failed/);
 });
 
@@ -150,7 +150,7 @@ test('migra versão 1 para a atual sem perder pastos ou gastos e pode reiniciali
   await db.runAsync("INSERT INTO grass_types (name, min_height_cm, max_height_cm) VALUES ('Teste', 10, 20)");
   await db.runAsync(`INSERT INTO pastures
     (name, area_hectares, grass_type_id, current_height_cm, grass_condition, coverage_percent)
-    VALUES ('Pasto teste', 1, 1, 15, 'verde', 90)`);
+    VALUES ('Pasto teste', 1, 1, 15, 'green', 90)`);
   await db.runAsync(`INSERT INTO expenses (description, category_id, amount_cents, expense_date)
     VALUES ('Compra teste', 1, 12345, '2026-09-29')`);
   await inicializarBanco(db);

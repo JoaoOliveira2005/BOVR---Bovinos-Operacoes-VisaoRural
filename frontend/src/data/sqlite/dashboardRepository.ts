@@ -33,7 +33,7 @@ export class RepositorioDashboardSqlite implements RepositorioDashboard {
     for (const p of pastosDetalhados) {
       const alturaAdequada =
         p.current_height_cm >= p.min_height_cm && p.current_height_cm <= p.max_height_cm;
-      const condicaoBoa = p.grass_condition === 'verde';
+      const condicaoBoa = p.grass_condition === 'green';
       const coberturaBoa = p.coverage_percent >= 70;
       if (alturaAdequada && condicaoBoa && coberturaBoa) {
         pastosBons++;

@@ -13,7 +13,7 @@ import { descreverIdade, idadeDoAnimal } from '../src/features/cattle/idade';
 import type { Animal } from '../src/features/cattle/types';
 import { cores, espaco, tipografia, toque } from '../src/theme/tokens';
 
-const ROTULO_SEXO = { macho: 'Macho', femea: 'Fêmea' } as const;
+const ROTULO_SEXO = { male: 'Macho', female: 'Fêmea' } as const;
 
 /** RF-01.4 — idade a partir da data ou da estimativa, marcada quando é estimada. */
 function textoIdade(animal: Animal): string {

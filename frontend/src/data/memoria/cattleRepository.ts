@@ -37,7 +37,7 @@ export class RepositorioAnimaisMemoria implements RepositorioAnimais {
     const alvo = normalizar(brinco);
     return animais.some(
       (animal) =>
-        animal.situacao === 'ativo' &&
+        animal.situacao === 'active' &&
         animal.id !== ignorarId &&
         normalizar(animal.brinco) === alvo,
     );
@@ -45,7 +45,7 @@ export class RepositorioAnimaisMemoria implements RepositorioAnimais {
 
   async criar(entrada: EntradaAnimal): Promise<number> {
     const id = proximoId++;
-    animais.push({ ...entrada, id, situacao: 'ativo' });
+    animais.push({ ...entrada, id, situacao: 'active' });
     return id;
   }
 

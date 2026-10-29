@@ -27,17 +27,17 @@ function abrir(caminho) {
 let pasta, caminho, db, cadastro, manejo, repo, tipo, norte, sul;
 const entrada = {
   nome: 'Norte', areaHectares: 2.5, alturaAtualCm: 20,
-  condicaoCapim: 'verde', coberturaPercentual: 80, dataLeitura: '2026-09-01',
+  condicaoCapim: 'green', coberturaPercentual: 80, dataLeitura: '2026-09-01',
 };
 function conectar() {
   repo = new RepositorioPastosSqlite(db);
   cadastro = new ServicoPastos(repo, new RepositorioTiposCapimSqlite(db));
   manejo = new ServicoManejoPastos(new RepositorioManejoPastosSqlite(db), () => '2026-10-13');
 }
-async function animal(brinco, lote = null, situacao = 'ativo') {
+async function animal(brinco, lote = null, situacao = 'active') {
   return (await db.runAsync(
-    `INSERT INTO cattle (ear_tag, sex, estimated_age_months, breed, herd_id, status)
-     VALUES (?, 'femea', 24, 'Nelore', ?, ?)`, brinco, lote, situacao,
+    `INSERT INTO cattle (tag_number, sex, estimated_age_months, breed, herd_id, status)
+     VALUES (?, 'female', 24, 'Nelore', ?, ?)`, brinco, lote, situacao,
   )).lastInsertRowId;
 }
 const mover = (animalId, pastoDestinoId, dataMovimento) => manejo.moverAnimal(animalId, { pastoDestinoId, dataMovimento });
@@ -55,33 +55,33 @@ beforeEach(async () => {
 afterEach(() => { db.sqlite.close(); rmSync(pasta, { recursive: true, force: true }); });
 
 test.each([
-  [20, 'verde', 80, 'boa'], [40, 'verde', 100, 'boa'],
-  [19, 'verde', 80, 'regular'], [41, 'verde', 80, 'regular'],
-  [20, 'parcialmente_seco', 80, 'regular'], [20, 'seco', 80, 'regular'],
-  [20, 'verde', 79, 'regular'], [19, 'seco', 80, 'ruim'],
-  [20, 'seco', 79, 'ruim'], [19, 'verde', 79, 'ruim'], [19, 'seco', 79, 'ruim'],
+  [20, 'green', 80, 'good'], [40, 'green', 100, 'good'],
+  [19, 'green', 80, 'fair'], [41, 'green', 80, 'fair'],
+  [20, 'partly_dry', 80, 'fair'], [20, 'dry', 80, 'fair'],
+  [20, 'green', 79, 'fair'], [19, 'dry', 80, 'poor'],
+  [20, 'dry', 79, 'poor'], [19, 'green', 79, 'poor'], [19, 'dry', 79, 'poor'],
 ])('classifica altura %s, condição %s, cobertura %s como %s', (altura, condicao, cobertura, esperado) => {
   expect(classificarQualidade(altura, condicao, cobertura, 20, 40)).toBe(esperado);
 });
 
 test('salvar pasto registra leitura datada; editar apenas nome/área não inventa outra medição', async () => {
-  await expect(cadastro.obterPasto(norte)).resolves.toMatchObject({ qualidade: 'boa', dataLeitura: '2026-09-01' });
+  await expect(cadastro.obterPasto(norte)).resolves.toMatchObject({ qualidade: 'good', dataLeitura: '2026-09-01' });
   const { dataLeitura, ...semData } = entrada;
   await cadastro.salvarPasto({ ...semData, nome: 'Novo nome', tipoCapimId: tipo }, norte);
   expect(await manejo.listarLeituras(norte)).toHaveLength(1);
   await cadastro.salvarPasto({ ...entrada, alturaAtualCm: 10, tipoCapimId: tipo, dataLeitura: '2026-09-03' }, norte);
   const leituras = await manejo.listarLeituras(norte);
-  expect(leituras.map((l) => [l.dataLeitura, l.qualidade])).toEqual([['2026-09-03', 'regular'], ['2026-09-01', 'boa']]);
+  expect(leituras.map((l) => [l.dataLeitura, l.qualidade])).toEqual([['2026-09-03', 'fair'], ['2026-09-01', 'good']]);
 });
 
 test('leituras históricas preservam as medições atuais e os limites originais do capim', async () => {
   await manejo.registrarLeitura({ ...entrada, pastoId: norte, alturaAtualCm: 10, dataLeitura: '2026-08-30' });
   await expect(cadastro.obterPasto(norte)).resolves.toMatchObject({ alturaAtualCm: 20, dataLeitura: '2026-09-01' });
   await cadastro.salvarTipo({ nome: 'Braquiária', alturaMinimaCm: 30, alturaMaximaCm: 50 }, tipo);
-  await expect(cadastro.obterPasto(norte)).resolves.toMatchObject({ qualidade: 'regular' });
-  expect((await manejo.listarLeituras(norte))[0]).toMatchObject({ qualidade: 'boa', alturaMinimaCm: 20, alturaMaximaCm: 40 });
+  await expect(cadastro.obterPasto(norte)).resolves.toMatchObject({ qualidade: 'fair' });
+  expect((await manejo.listarLeituras(norte))[0]).toMatchObject({ qualidade: 'good', alturaMinimaCm: 20, alturaMaximaCm: 40 });
   await manejo.registrarLeitura({ ...entrada, pastoId: norte, dataLeitura: '2026-09-02' });
-  expect((await manejo.listarLeituras(norte))[0]).toMatchObject({ qualidade: 'regular', alturaMinimaCm: 30 });
+  expect((await manejo.listarLeituras(norte))[0]).toMatchObject({ qualidade: 'fair', alturaMinimaCm: 30 });
 });
 
 test.each([
@@ -125,7 +125,7 @@ test('descanso começa somente na última saída e fecha na primeira entrada', a
 test('movimenta lote dividido, mantém integrantes já no destino e registra cada origem', async () => {
   const lote = (await db.runAsync("INSERT INTO herds (name) VALUES ('Lote 1')")).lastInsertRowId;
   const a = await animal('A', lote), b = await animal('B', lote), c = await animal('C', lote);
-  await animal('Vendido', lote, 'vendido');
+  await animal('Vendido', lote, 'sold');
   await mover(a, norte, '2026-09-01'); await mover(b, sul, '2026-09-02');
   const ids = await manejo.moverLote(lote, { pastoDestinoId: sul, dataMovimento: '2026-09-10' });
   expect(ids).toHaveLength(2);
@@ -164,7 +164,7 @@ test('rejeita datas fora de ordem no animal e nos pastos envolvidos', async () =
 });
 
 test('rejeita destino inexistente, movimento sem alteração, inativo e data futura', async () => {
-  const a = await animal('A'), vendido = await animal('V', null, 'vendido');
+  const a = await animal('A'), vendido = await animal('V', null, 'sold');
   await expect(mover(a, 999, '2026-09-01')).rejects.toMatchObject({ codigo: 'nao_encontrado' });
   await expect(mover(a, null, '2026-09-01')).rejects.toMatchObject({ codigo: 'validacao' });
   await expect(mover(vendido, norte, '2026-09-01')).rejects.toMatchObject({ codigo: 'validacao' });
@@ -188,9 +188,9 @@ test('transferências concorrentes são serializadas e mantêm a origem real', a
 test('protege histórico de rotação e exige saída antes de uma baixa', async () => {
   const a = await animal('A'); await mover(a, norte, '2026-09-01');
   await expect(cadastro.excluirPasto(norte)).rejects.toMatchObject({ codigo: 'em_uso' });
-  await expect(db.runAsync("UPDATE cattle SET status = 'vendido' WHERE id = ?", a)).rejects.toThrow(/Retire o animal/);
+  await expect(db.runAsync("UPDATE cattle SET status = 'sold' WHERE id = ?", a)).rejects.toThrow(/Retire o animal/);
   await mover(a, null, '2026-09-05');
-  await db.runAsync("UPDATE cattle SET status = 'vendido' WHERE id = ?", a);
+  await db.runAsync("UPDATE cattle SET status = 'sold' WHERE id = ?", a);
   expect((await manejo.obterPainel(norte)).quantidadeAnimais).toBe(0);
   await cadastro.excluirPasto(sul); // pasto ainda sem rotação pode ser excluído com suas leituras
   expect(await cadastro.obterPasto(sul)).toBeNull();
@@ -246,12 +246,12 @@ test('migra versão 2 preservando cadastros, sem inventar datas de leitura nem l
   db.sqlite.exec('PRAGMA foreign_keys = ON; PRAGMA user_version = 2;');
   await db.runAsync("INSERT INTO grass_types (name,min_height_cm,max_height_cm) VALUES ('Capim antigo',20,40)");
   await db.runAsync(`INSERT INTO pastures (name,area_hectares,grass_type_id,current_height_cm,grass_condition,coverage_percent)
-    VALUES ('Pasto antigo',2,1,20,'verde',80)`);
-  const a = (await db.runAsync(`INSERT INTO cattle (ear_tag,sex,estimated_age_months,breed)
-    VALUES ('Antigo','femea',24,'Nelore')`)).lastInsertRowId;
+    VALUES ('Pasto antigo',2,1,20,'green',80)`);
+  const a = (await db.runAsync(`INSERT INTO cattle (tag_number,sex,estimated_age_months,breed)
+    VALUES ('Antigo','female',24,'Nelore')`)).lastInsertRowId;
   await inicializarBanco(db); conectar(); await inicializarBanco(db);
   expect((await db.getFirstAsync('PRAGMA user_version')).user_version).toBe(3);
-  expect(await cadastro.obterPasto(1)).toMatchObject({ nome: 'Pasto antigo', qualidade: 'boa', dataLeitura: null });
+  expect(await cadastro.obterPasto(1)).toMatchObject({ nome: 'Pasto antigo', qualidade: 'good', dataLeitura: null });
   expect(await manejo.listarLeituras(1)).toEqual([]);
   expect(await db.getFirstAsync('SELECT pasture_id,herd_id FROM cattle WHERE id = ?', a))
     .toEqual({ pasture_id: null, herd_id: null });

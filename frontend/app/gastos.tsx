@@ -126,7 +126,7 @@ const estilos = StyleSheet.create({
   valores: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    justify: 'space-between',
+    justifyContent: 'space-between',
     gap: espaco.sm,
   },
   valor: { ...tipografia.headingSm, color: cores.tinta },

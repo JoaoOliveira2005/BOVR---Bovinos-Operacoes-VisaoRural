@@ -12,7 +12,7 @@ import { mensagemErro } from '../src/domain/errors';
 import type { Pasto } from '../src/features/pastures/types';
 import { cores, espaco, tipografia, toque } from '../src/theme/tokens';
 
-const ROTULOS_CONDICAO = { verde: 'Verde', parcialmente_seco: 'Parcialmente seco', seco: 'Seco' } as const;
+const ROTULOS_CONDICAO = { green: 'Verde', partly_dry: 'Parcialmente seco', dry: 'Seco' } as const;
 
 export default function TelaPastos() {
   const router = useRouter();

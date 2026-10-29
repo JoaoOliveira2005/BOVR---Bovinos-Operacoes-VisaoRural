@@ -129,7 +129,7 @@ export function SplashAnimado({ aoConcluir }: Props) {
 
 const estilos = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: cores.canvas,
     alignItems: 'center',
     justifyContent: 'center',

@@ -164,7 +164,7 @@ export default function FormularioAnimal() {
       <Seletor
         rotulo="Sexo"
         valor={sexo}
-        opcoes={[{ valor: 'macho', rotulo: 'Macho' }, { valor: 'femea', rotulo: 'Fêmea' }]}
+        opcoes={[{ valor: 'male', rotulo: 'Macho' }, { valor: 'female', rotulo: 'Fêmea' }]}
         aoSelecionar={setSexo}
       />
 

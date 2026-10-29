@@ -28,7 +28,7 @@ describe('casos de uso de pastos', () => {
 
     expect(() => servico.salvarPasto({
       nome: 'Pasto', areaHectares: 0, tipoCapimId: 1,
-      alturaAtualCm: 20, condicaoCapim: 'verde', coberturaPercentual: 80,
+      alturaAtualCm: 20, condicaoCapim: 'green', coberturaPercentual: 80,
     })).toThrow(ErroDominio);
     expect(pastos.criar).not.toHaveBeenCalled();
   });
