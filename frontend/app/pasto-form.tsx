@@ -20,6 +20,7 @@ export default function FormularioPasto() {
   const params = useLocalSearchParams<{ id?: string }>();
   const id = params.id ? Number(params.id) : undefined;
   const servico = useServicoPastos();
+
   const [tipos, setTipos] = useState<TipoCapim[]>([]);
   const [nome, setNome] = useState('');
   const [area, setArea] = useState('');
@@ -29,6 +30,13 @@ export default function FormularioPasto() {
   const [cobertura, setCobertura] = useState('');
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+
+  // Estados de erro por campo
+  const [erroNome, setErroNome] = useState<string | null>(null);
+  const [erroArea, setErroArea] = useState<string | null>(null);
+  const [erroTipo, setErroTipo] = useState<string | null>(null);
+  const [erroAltura, setErroAltura] = useState<string | null>(null);
+  const [erroCobertura, setErroCobertura] = useState<string | null>(null);
   const [mensagemErroGeral, setMensagemErroGeral] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,7 +52,9 @@ export default function FormularioPasto() {
           setAltura(String(pasto.alturaAtualCm).replace('.', ','));
           setCondicao(pasto.condicaoCapim);
           setCobertura(String(pasto.coberturaPercentual));
-        } else if (lista.length === 1) setTipoId(lista[0].id);
+        } else if (lista.length === 1) {
+          setTipoId(lista[0].id);
+        }
       } catch (causa) {
         const msg = mensagemErro(causa);
         setMensagemErroGeral(msg);
@@ -64,11 +74,53 @@ export default function FormularioPasto() {
     [tipos],
   );
 
-  const salvar = async () => {
+  const limparErros = () => {
+    setErroNome(null);
+    setErroArea(null);
+    setErroTipo(null);
+    setErroAltura(null);
+    setErroCobertura(null);
     setMensagemErroGeral(null);
+  };
 
-    if (!nome.trim() || !area.trim() || tipoId === null || !altura.trim() || !cobertura.trim()) {
-      const msg = 'Preencha todos os campos obrigatórios do pasto.';
+  const salvar = async () => {
+    limparErros();
+
+    const nomeLimpo = nome.trim();
+    const areaNum = numero(area);
+    const alturaNum = numero(altura);
+    const coberturaLimpa = cobertura.trim().replace('%', '').replace(',', '.');
+    const coberturaNum = Math.round(Number(coberturaLimpa));
+
+    let temErro = false;
+
+    if (!nomeLimpo) {
+      setErroNome('Informe o nome do pasto.');
+      temErro = true;
+    }
+
+    if (!area.trim() || isNaN(areaNum) || areaNum <= 0) {
+      setErroArea('A área deve ser um número maior que zero (ex.: 2,5).');
+      temErro = true;
+    }
+
+    if (tipoId === null) {
+      setErroTipo('Selecione o tipo de capim.');
+      temErro = true;
+    }
+
+    if (!altura.trim() || isNaN(alturaNum) || alturaNum < 0) {
+      setErroAltura('A altura atual deve ser maior ou igual a zero (ex.: 20).');
+      temErro = true;
+    }
+
+    if (!cobertura.trim() || isNaN(coberturaNum) || coberturaNum < 0 || coberturaNum > 100) {
+      setErroCobertura('A cobertura do solo deve ser um percentual inteiro entre 0 e 100.');
+      temErro = true;
+    }
+
+    if (temErro) {
+      const msg = 'Revise os campos destacados abaixo.';
       setMensagemErroGeral(msg);
       if (Platform.OS === 'web') {
         window.alert(`Atenção: ${msg}`);
@@ -82,12 +134,12 @@ export default function FormularioPasto() {
     try {
       await servico.salvarPasto(
         {
-          nome,
-          areaHectares: numero(area),
-          tipoCapimId: tipoId,
-          alturaAtualCm: numero(altura),
+          nome: nomeLimpo,
+          areaHectares: areaNum,
+          tipoCapimId: tipoId!,
+          alturaAtualCm: alturaNum,
           condicaoCapim: condicao,
-          coberturaPercentual: Number(cobertura),
+          coberturaPercentual: coberturaNum,
         },
         id,
       );
@@ -95,6 +147,14 @@ export default function FormularioPasto() {
     } catch (causa) {
       const msg = mensagemErro(causa);
       setMensagemErroGeral(msg);
+
+      const msgLower = msg.toLowerCase();
+      if (msgLower.includes('nome')) setErroNome(msg);
+      if (msgLower.includes('área') || msgLower.includes('area')) setErroArea(msg);
+      if (msgLower.includes('capim')) setErroTipo(msg);
+      if (msgLower.includes('altura')) setErroAltura(msg);
+      if (msgLower.includes('cobertura')) setErroCobertura(msg);
+
       if (Platform.OS === 'web') {
         window.alert(`Revise os dados: ${msg}`);
       } else {
@@ -139,39 +199,53 @@ export default function FormularioPasto() {
             value={nome}
             onChangeText={(txt) => {
               setNome(txt);
+              setErroNome(null);
               setMensagemErroGeral(null);
             }}
+            erro={erroNome}
             placeholder="Ex.: Pasto Norte"
           />
+
           <Campo
             rotulo="Área (ha)"
             value={area}
             onChangeText={(txt) => {
               setArea(txt);
+              setErroArea(null);
               setMensagemErroGeral(null);
             }}
+            erro={erroArea}
             keyboardType="decimal-pad"
             placeholder="0,00"
           />
-          <Seletor
-            rotulo="Tipo de capim"
-            valor={tipoId}
-            opcoes={opcoesTipos}
-            aoSelecionar={(tid) => {
-              setTipoId(tid);
-              setMensagemErroGeral(null);
-            }}
-          />
+
+          <View style={estilos.secaoCampo}>
+            <Seletor
+              rotulo="Tipo de capim"
+              valor={tipoId}
+              opcoes={opcoesTipos}
+              aoSelecionar={(tid) => {
+                setTipoId(tid);
+                setErroTipo(null);
+                setMensagemErroGeral(null);
+              }}
+            />
+            {erroTipo ? <Text style={estilos.erroCampo}>{erroTipo}</Text> : null}
+          </View>
+
           <Campo
             rotulo="Altura atual (cm)"
             value={altura}
             onChangeText={(txt) => {
               setAltura(txt);
+              setErroAltura(null);
               setMensagemErroGeral(null);
             }}
+            erro={erroAltura}
             keyboardType="decimal-pad"
             placeholder="0,0"
           />
+
           <Seletor
             rotulo="Condição do capim"
             valor={condicao}
@@ -185,16 +259,20 @@ export default function FormularioPasto() {
               setMensagemErroGeral(null);
             }}
           />
+
           <Campo
             rotulo="Cobertura do solo (%)"
             value={cobertura}
             onChangeText={(txt) => {
               setCobertura(txt);
+              setErroCobertura(null);
               setMensagemErroGeral(null);
             }}
+            erro={erroCobertura}
             keyboardType="number-pad"
             placeholder="0 a 100"
           />
+
           <Botao
             titulo={id ? 'Salvar alterações' : 'Cadastrar pasto'}
             carregando={salvando}
@@ -223,5 +301,13 @@ const estilos = StyleSheet.create({
     ...tipografia.bodyMedia,
     color: cores.ember,
     flex: 1,
+  },
+  secaoCampo: {
+    gap: espaco.xs,
+  },
+  erroCampo: {
+    ...tipografia.caption,
+    letterSpacing: 0,
+    color: cores.ember,
   },
 });
