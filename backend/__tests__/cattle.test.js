@@ -140,8 +140,9 @@ test.each([
 });
 
 async function voltarParaVersao1() {
-  await db.execAsync(`DROP TABLE pasture_rest_periods; DROP TABLE pasture_movements;
-    DROP TABLE pasture_inspections; DROP TABLE cattle; DROP TABLE herds; PRAGMA user_version = 1;`);
+  await db.execAsync(`DROP TABLE IF EXISTS sale_items; DROP TABLE IF EXISTS sales;
+    DROP TABLE IF EXISTS pasture_rest_periods; DROP TABLE IF EXISTS pasture_movements;
+    DROP TABLE IF EXISTS pasture_inspections; DROP TABLE IF EXISTS cattle; DROP TABLE IF EXISTS herds; PRAGMA user_version = 1;`);
 }
 
 test('migra versão 1 para a atual sem perder pastos ou gastos e pode reinicializar', async () => {
@@ -156,18 +157,60 @@ test('migra versão 1 para a atual sem perder pastos ou gastos e pode reiniciali
   await inicializarBanco(db);
   await servico.salvar(entrada);
   await inicializarBanco(db);
-  expect((await db.getFirstAsync('PRAGMA user_version')).user_version).toBe(3);
+  expect((await db.getFirstAsync('PRAGMA user_version')).user_version).toBe(4);
   expect((await db.getFirstAsync('SELECT name FROM pastures')).name).toBe('Pasto teste');
   expect((await db.getFirstAsync('SELECT amount_cents FROM expenses')).amount_cents).toBe(12345);
   expect(await repo.listar()).toHaveLength(1);
   expect(await db.getAllAsync('SELECT * FROM expense_categories')).toHaveLength(4);
 });
 
+test('migra banco legado (ear_tag e enums em português) para o schema V1.3 e permite cadastrar novos animais', async () => {
+  await db.execAsync(`
+    PRAGMA foreign_keys = OFF;
+    DROP TRIGGER IF EXISTS trg_cattle_death_remove_from_planned_sales;
+    DROP TRIGGER IF EXISTS trg_cattle_delete_remove_from_planned_sales;
+    DROP TRIGGER IF EXISTS cattle_status_requires_pasture_exit;
+    DROP TABLE IF EXISTS cattle;
+    CREATE TABLE cattle (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ear_tag TEXT NOT NULL COLLATE NOCASE CHECK (length(trim(ear_tag)) > 0),
+      sex TEXT NOT NULL CHECK (sex IN ('macho', 'femea')),
+      birth_date TEXT,
+      estimated_age_months INTEGER,
+      breed TEXT NOT NULL CHECK (length(trim(breed)) > 0),
+      notes TEXT,
+      status TEXT NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo', 'vendido', 'morto', 'transferido')),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT INTO cattle (ear_tag, sex, estimated_age_months, breed, status)
+    VALUES ('LEGADO-01', 'macho', 24, 'Nelore', 'ativo');
+    PRAGMA user_version = 4;
+    PRAGMA foreign_keys = ON;
+  `);
+
+  await inicializarBanco(db);
+
+  // Animal legado foi preservado e convertido para V1.3
+  const existentes = await servico.listar();
+  expect(existentes).toHaveLength(1);
+  expect(existentes[0]).toMatchObject({
+    brinco: 'LEGADO-01',
+    sexo: 'male',
+    situacao: 'active',
+  });
+
+  // Novo cadastro funciona sem erro de coluna ou CHECK constraint
+  const novoId = await servico.salvar(entrada);
+  expect(novoId).toBeGreaterThan(1);
+  expect(await servico.listar()).toHaveLength(2);
+});
+
 test('falha na migração faz rollback e permite nova tentativa', async () => {
   await voltarParaVersao1();
   const executar = db.execAsync;
   const falhando = { ...db, execAsync: async (sql) => {
-    if (sql.startsWith('PRAGMA user_version = 3')) throw new Error('falha simulada');
+    if (sql.startsWith('PRAGMA user_version = 4')) throw new Error('falha simulada');
     return executar(sql);
   } };
   await expect(inicializarBanco(falhando)).rejects.toThrow('falha simulada');
@@ -176,4 +219,38 @@ test('falha na migração faz rollback e permite nova tentativa', async () => {
     .toBeNull();
   await inicializarBanco(db);
   await expect(servico.salvar(entrada)).resolves.toBe(1);
+});
+
+test('morte de animal desconsidera o animal de vendas planejadas automaticamente', async () => {
+  const id1 = await servico.salvar({ ...entrada, brinco: 'BOI-1' });
+  const id2 = await servico.salvar({ ...entrada, brinco: 'BOI-2' });
+
+  // Cria venda planejada com 2 animais
+  await db.runAsync(
+    "INSERT INTO sales (buyer, sale_date, gross_value_cents, sale_type) VALUES ('Comprador', '2026-11-01', 1000000, 'planejada')",
+  );
+  const saleId = (await db.getFirstAsync('SELECT last_insert_rowid() as id')).id;
+  await db.runAsync('INSERT INTO sale_items (sale_id, animal_id, ear_tag, weight_kg) VALUES (?, ?, ?, ?)', saleId, id1, 'BOI-1', 500);
+  await db.runAsync('INSERT INTO sale_items (sale_id, animal_id, ear_tag, weight_kg) VALUES (?, ?, ?, ?)', saleId, id2, 'BOI-2', 500);
+
+  // Morte do primeiro animal
+  await servico.marcarComoMorto(id1);
+
+  // O animal morto não aparece em ativos
+  const ativos = await servico.listarAtivos();
+  expect(ativos.map((a) => a.id)).not.toContain(id1);
+  expect(ativos.map((a) => a.id)).toContain(id2);
+
+  // A venda planejada agora deve ter apenas o BOI-2 e valor recalculado
+  const itensRestantes = await db.getAllAsync('SELECT * FROM sale_items WHERE sale_id = ?', saleId);
+  expect(itensRestantes).toHaveLength(1);
+  expect(itensRestantes[0].ear_tag).toBe('BOI-2');
+
+  const vendaAtualizada = await db.getFirstAsync('SELECT * FROM sales WHERE id = ?', saleId);
+  expect(vendaAtualizada.gross_value_cents).toBe(500000);
+
+  // Morte do segundo animal deixa a venda planejada vazia -> exclui a venda planejada
+  await servico.marcarComoMorto(id2);
+  const vendaFinal = await db.getFirstAsync('SELECT * FROM sales WHERE id = ?', saleId);
+  expect(vendaFinal).toBeNull();
 });

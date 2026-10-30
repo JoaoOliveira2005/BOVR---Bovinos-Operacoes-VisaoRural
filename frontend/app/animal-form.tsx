@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
@@ -10,9 +11,9 @@ import { Tela } from '../src/components/Tela';
 import { useServicoAnimais } from '../../backend/data/sqlite/cattleServices';
 import { ErroDominio, mensagemErro } from '../src/domain/errors';
 import { descreverIdade, idadeEmMeses } from '../src/features/cattle/idade';
-import type { EntradaAnimal, SexoAnimal } from '../src/features/cattle/types';
+import type { EntradaAnimal, SexoAnimal, SituacaoAnimal } from '../src/features/cattle/types';
 import { dataParaIso, isoParaData, mascararData } from '../src/lib/formato';
-import { cores, espaco, tipografia } from '../src/theme/tokens';
+import { cores, espaco, raio, tipografia } from '../src/theme/tokens';
 
 /** RF-01.3 — a idade vem de uma fonte ou da outra, nunca das duas. */
 type FonteIdade = 'nascimento' | 'estimativa';
@@ -34,6 +35,7 @@ export default function FormularioAnimal() {
 
   const [brinco, setBrinco] = useState('');
   const [sexo, setSexo] = useState<SexoAnimal | null>(null);
+  const [situacao, setSituacao] = useState<SituacaoAnimal>('active');
   const [fonteIdade, setFonteIdade] = useState<FonteIdade>('nascimento');
   const [nascimento, setNascimento] = useState('');
   const [anos, setAnos] = useState('');
@@ -43,8 +45,13 @@ export default function FormularioAnimal() {
 
   const [carregando, setCarregando] = useState(Boolean(id));
   const [salvando, setSalvando] = useState(false);
-  /** Erro do brinco fica no campo (RF-01.2); os demais vão para o alerta. */
+
+  // Estados de erro para feedback visual imediato
   const [erroBrinco, setErroBrinco] = useState<string | null>(null);
+  const [erroSexo, setErroSexo] = useState<string | null>(null);
+  const [erroRaca, setErroRaca] = useState<string | null>(null);
+  const [erroIdade, setErroIdade] = useState<string | null>(null);
+  const [mensagemErroGeral, setMensagemErroGeral] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -53,6 +60,7 @@ export default function FormularioAnimal() {
         const animal = await servico.exigirAnimal(id);
         setBrinco(animal.brinco);
         setSexo(animal.sexo);
+        setSituacao(animal.situacao ?? 'active');
         setRaca(animal.raca);
         setObservacoes(animal.observacoes ?? '');
         if (animal.dataNascimento) {
@@ -64,7 +72,14 @@ export default function FormularioAnimal() {
           setMeses(String(animal.idadeEstimadaMeses % 12));
         }
       } catch (causa) {
-        Alert.alert('Não foi possível carregar', mensagemErro(causa));
+        const msg = mensagemErro(causa);
+        console.error('[FormularioAnimal] Erro ao carregar animal:', { id, mensagem: msg, causa });
+        setMensagemErroGeral(msg);
+        if (Platform.OS === 'web') {
+          window.alert(`Não foi possível carregar: ${msg}`);
+        } else {
+          Alert.alert('Não foi possível carregar', msg);
+        }
       } finally {
         setCarregando(false);
       }
@@ -80,6 +95,14 @@ export default function FormularioAnimal() {
     return descreverIdade(idadeEmMeses(iso));
   }, [nascimento]);
 
+  const limparErros = () => {
+    setErroBrinco(null);
+    setErroSexo(null);
+    setErroRaca(null);
+    setErroIdade(null);
+    setMensagemErroGeral(null);
+  };
+
   const montarEntrada = (): EntradaAnimal => {
     const estimativa =
       Number(soDigitos(anos) || 0) * 12 + Number(soDigitos(meses) || 0);
@@ -91,23 +114,102 @@ export default function FormularioAnimal() {
         fonteIdade === 'estimativa' && (anos !== '' || meses !== '') ? estimativa : null,
       raca,
       observacoes: observacoes || null,
+      situacao,
     };
   };
 
   const salvar = async () => {
-    setErroBrinco(null);
+    limparErros();
+
+    let temErro = false;
+
+    if (!brinco.trim()) {
+      setErroBrinco('Informe o número do brinco.');
+      temErro = true;
+    }
+
+    if (!sexo) {
+      setErroSexo('Selecione o sexo do animal: macho ou fêmea.');
+      temErro = true;
+    }
+
+    if (!raca.trim()) {
+      setErroRaca('Informe a raça do animal.');
+      temErro = true;
+    }
+
+    if (fonteIdade === 'nascimento') {
+      if (!nascimento.trim()) {
+        setErroIdade('Informe a data de nascimento.');
+        temErro = true;
+      } else if (!dataParaIso(nascimento)) {
+        setErroIdade('Data inválida. Use o formato DD/MM/AAAA.');
+        temErro = true;
+      }
+    } else {
+      if (!anos.trim() && !meses.trim()) {
+        setErroIdade('Informe a idade estimada em anos ou meses.');
+        temErro = true;
+      }
+    }
+
+    if (temErro) {
+      const msg = 'Preencha todos os campos obrigatórios para cadastrar o animal.';
+      console.warn('[FormularioAnimal] Validação de campos obrigatórios falhou:', {
+        brinco,
+        sexo,
+        raca,
+        fonteIdade,
+        nascimento,
+        anos,
+        meses,
+      });
+      setMensagemErroGeral(msg);
+      if (Platform.OS === 'web') {
+        window.alert(`Atenção: ${msg}`);
+      } else {
+        Alert.alert('Atenção', msg);
+      }
+      return;
+    }
+
+    const entrada = montarEntrada();
+    console.log('[FormularioAnimal] Salvando animal:', { id, entrada });
+
     setSalvando(true);
     try {
-      await servico.salvar(montarEntrada(), id);
+      const resultadoId = await servico.salvar(entrada, id);
+      console.log('[FormularioAnimal] Animal salvo com sucesso:', { id: id ?? resultadoId });
       // RNF-10 — só volta depois que o salvamento resolveu.
       router.back();
     } catch (causa) {
-      // RF-01.2 — o brinco duplicado marca o campo que o usuário precisa mudar,
-      // em vez de esconder o problema num alerta que ele fecha e esquece.
+      const msg = mensagemErro(causa);
+      const causaObj = causa instanceof Error ? { message: causa.message, stack: causa.stack } : causa;
+      console.error('[FormularioAnimal] ERRO CRÍTICO AO SALVAR ANIMAL:', {
+        id,
+        entrada,
+        codigo: causa instanceof ErroDominio ? causa.codigo : 'desconhecido',
+        mensagem: msg,
+        causa: causaObj,
+      });
+      setMensagemErroGeral(msg);
+
       if (causa instanceof ErroDominio && causa.codigo === 'duplicado') {
         setErroBrinco(causa.message);
+      } else if (msg.toLowerCase().includes('brinco')) {
+        setErroBrinco(msg);
+      } else if (msg.toLowerCase().includes('sexo')) {
+        setErroSexo(msg);
+      } else if (msg.toLowerCase().includes('raça')) {
+        setErroRaca(msg);
+      } else if (msg.toLowerCase().includes('nascimento') || msg.toLowerCase().includes('idade')) {
+        setErroIdade(msg);
+      }
+
+      if (Platform.OS === 'web') {
+        window.alert(`Revise os dados: ${msg}`);
       } else {
-        Alert.alert('Revise os dados', mensagemErro(causa));
+        Alert.alert('Revise os dados', msg);
       }
     } finally {
       setSalvando(false);
@@ -119,9 +221,11 @@ export default function FormularioAnimal() {
     const executarExclusao = async () => {
       try {
         await servico.excluir(id);
+        console.log('[FormularioAnimal] Animal excluído com sucesso:', { id, brinco });
         router.back();
       } catch (causa) {
         const mensagem = mensagemErro(causa);
+        console.error('[FormularioAnimal] Erro ao excluir animal:', { id, brinco, mensagem, causa });
         if (Platform.OS === 'web') {
           window.alert(`Não foi possível excluir: ${mensagem}`);
         } else {
@@ -150,10 +254,22 @@ export default function FormularioAnimal() {
     <Tela>
       <Text style={estilos.titulo}>{id ? 'Editar animal' : 'Novo animal'}</Text>
 
+      {/* Banner de Erro em Destaque */}
+      {mensagemErroGeral ? (
+        <View style={estilos.bannerErro}>
+          <Feather name="alert-triangle" size={18} color={cores.ember} />
+          <Text style={estilos.textoBannerErro}>{mensagemErroGeral}</Text>
+        </View>
+      ) : null}
+
       <Campo
         rotulo="Número do brinco"
         value={brinco}
-        onChangeText={(texto) => { setBrinco(texto); setErroBrinco(null); }}
+        onChangeText={(texto) => {
+          setBrinco(texto);
+          setErroBrinco(null);
+          setMensagemErroGeral(null);
+        }}
         erro={erroBrinco}
         ajuda="Identificação principal do animal."
         placeholder="Ex.: 1234"
@@ -161,12 +277,19 @@ export default function FormularioAnimal() {
         autoFocus={!id}
       />
 
-      <Seletor
-        rotulo="Sexo"
-        valor={sexo}
-        opcoes={[{ valor: 'male', rotulo: 'Macho' }, { valor: 'female', rotulo: 'Fêmea' }]}
-        aoSelecionar={setSexo}
-      />
+      <View style={estilos.secaoCampo}>
+        <Seletor
+          rotulo="Sexo"
+          valor={sexo}
+          opcoes={[{ valor: 'male', rotulo: 'Macho' }, { valor: 'female', rotulo: 'Fêmea' }]}
+          aoSelecionar={(s) => {
+            setSexo(s);
+            setErroSexo(null);
+            setMensagemErroGeral(null);
+          }}
+        />
+        {erroSexo ? <Text style={estilos.erroCampo}>{erroSexo}</Text> : null}
+      </View>
 
       <Seletor
         rotulo="Idade"
@@ -175,45 +298,70 @@ export default function FormularioAnimal() {
           { valor: 'nascimento', rotulo: 'Sei a data de nascimento' },
           { valor: 'estimativa', rotulo: 'Idade estimada' },
         ]}
-        aoSelecionar={setFonteIdade}
+        aoSelecionar={(f) => {
+          setFonteIdade(f);
+          setErroIdade(null);
+          setMensagemErroGeral(null);
+        }}
       />
 
       {fonteIdade === 'nascimento' ? (
         <Campo
           rotulo="Data de nascimento"
           value={nascimento}
-          onChangeText={(texto) => setNascimento(mascararData(texto))}
+          onChangeText={(texto) => {
+            setNascimento(mascararData(texto));
+            setErroIdade(null);
+            setMensagemErroGeral(null);
+          }}
+          erro={erroIdade}
           ajuda={idadeCalculada ? `Idade: ${idadeCalculada}.` : 'Formato DD/MM/AAAA.'}
           placeholder="DD/MM/AAAA"
           keyboardType="number-pad"
         />
       ) : (
-        <View style={estilos.idade}>
-          <View style={estilos.metade}>
-            <Campo
-              rotulo="Anos"
-              value={anos}
-              onChangeText={(texto) => setAnos(soDigitos(texto).slice(0, 2))}
-              placeholder="0"
-              keyboardType="number-pad"
-            />
+        <View style={estilos.secaoCampo}>
+          <View style={estilos.idade}>
+            <View style={estilos.metade}>
+              <Campo
+                rotulo="Anos"
+                value={anos}
+                onChangeText={(texto) => {
+                  setAnos(soDigitos(texto).slice(0, 2));
+                  setErroIdade(null);
+                  setMensagemErroGeral(null);
+                }}
+                placeholder="0"
+                keyboardType="number-pad"
+              />
+            </View>
+            <View style={estilos.metade}>
+              <Campo
+                rotulo="Meses"
+                value={meses}
+                onChangeText={(texto) => {
+                  setMeses(soDigitos(texto).slice(0, 2));
+                  setErroIdade(null);
+                  setMensagemErroGeral(null);
+                }}
+                placeholder="0"
+                keyboardType="number-pad"
+              />
+            </View>
           </View>
-          <View style={estilos.metade}>
-            <Campo
-              rotulo="Meses"
-              value={meses}
-              onChangeText={(texto) => setMeses(soDigitos(texto).slice(0, 2))}
-              placeholder="0"
-              keyboardType="number-pad"
-            />
-          </View>
+          {erroIdade ? <Text style={estilos.erroCampo}>{erroIdade}</Text> : null}
         </View>
       )}
 
       <Campo
         rotulo="Raça"
         value={raca}
-        onChangeText={setRaca}
+        onChangeText={(texto) => {
+          setRaca(texto);
+          setErroRaca(null);
+          setMensagemErroGeral(null);
+        }}
+        erro={erroRaca}
         placeholder="Ex.: Nelore"
         autoCapitalize="words"
       />
@@ -229,11 +377,46 @@ export default function FormularioAnimal() {
         style={estilos.areaTexto}
       />
 
+      {id ? (
+        <View style={estilos.secaoCampo}>
+          <Seletor
+            rotulo="Situação do animal"
+            valor={situacao}
+            opcoes={[
+              { valor: 'active', rotulo: 'Ativo' },
+              { valor: 'dead', rotulo: 'Morto (óbito)' },
+              { valor: 'sold', rotulo: 'Vendido' },
+              { valor: 'transferred', rotulo: 'Transferido' },
+            ]}
+            aoSelecionar={(s) => setSituacao(s)}
+          />
+          {situacao === 'dead' ? (
+            <Text style={estilos.avisoSituacao}>
+              Ao marcar como morto, o animal sairá do rebanho ativo e será desconsiderado de vendas planejadas automaticamente.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
       <Botao
         titulo={id ? 'Salvar alterações' : 'Cadastrar animal'}
         carregando={salvando}
         onPress={salvar}
       />
+      {id && situacao === 'active' ? (
+        <Botao
+          titulo="Registrar morte do animal"
+          variante="secundario"
+          onPress={() => {
+            setSituacao('dead');
+            if (Platform.OS === 'web') {
+              window.alert('Situação alterada para "Morto". Clique em "Salvar alterações" para confirmar a baixa.');
+            } else {
+              Alert.alert('Atenção', 'Situação alterada para "Morto". Clique em "Salvar alterações" para confirmar a baixa.');
+            }
+          }}
+        />
+      ) : null}
       {id ? <Botao titulo="Excluir animal" variante="perigo" onPress={excluir} /> : null}
       <Botao titulo="Cancelar" variante="secundario" onPress={() => router.back()} />
     </Tela>
@@ -242,6 +425,35 @@ export default function FormularioAnimal() {
 
 const estilos = StyleSheet.create({
   titulo: { ...tipografia.headingSm, color: cores.tinta, marginBottom: espaco.sm },
+  bannerErro: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaco.sm,
+    padding: espaco.md,
+    borderRadius: raio.interativo,
+    backgroundColor: 'rgba(255, 107, 107, 0.12)',
+    borderWidth: 1,
+    borderColor: cores.ember,
+    marginBottom: espaco.sm,
+  },
+  textoBannerErro: {
+    ...tipografia.bodyMedia,
+    color: cores.ember,
+    flex: 1,
+  },
+  secaoCampo: {
+    gap: espaco.xs,
+  },
+  avisoSituacao: {
+    ...tipografia.caption,
+    color: cores.ember,
+    marginTop: 4,
+  },
+  erroCampo: {
+    ...tipografia.caption,
+    letterSpacing: 0,
+    color: cores.ember,
+  },
   idade: { flexDirection: 'row', gap: espaco.md },
   metade: { flex: 1 },
   // `textAlignVertical` mantem o cursor no topo no Android; sem isso o texto
