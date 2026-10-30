@@ -39,7 +39,9 @@ export default function TelaGado() {
       setAnimais(await servico.listar());
       setErro(null);
     } catch (causa) {
-      setErro(mensagemErro(causa));
+      const msg = mensagemErro(causa);
+      console.error('[TelaGado] Erro ao listar animais:', { mensagem: msg, causa });
+      setErro(msg);
     } finally {
       setCarregando(false);
     }
@@ -59,6 +61,7 @@ export default function TelaGado() {
         await carregar();
       } catch (causa) {
         const mensagem = mensagemErro(causa);
+        console.error('[TelaGado] Erro ao registrar morte:', { animal, mensagem, causa });
         if (Platform.OS === 'web') {
           window.alert(`Não foi possível registrar morte: ${mensagem}`);
         } else {
@@ -88,6 +91,7 @@ export default function TelaGado() {
         await carregar();
       } catch (causa) {
         const mensagem = mensagemErro(causa);
+        console.error('[TelaGado] Erro ao excluir animal:', { animal, mensagem, causa });
         if (Platform.OS === 'web') {
           window.alert(`Não foi possível excluir: ${mensagem}`);
         } else {

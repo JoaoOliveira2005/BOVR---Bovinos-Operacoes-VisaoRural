@@ -164,6 +164,48 @@ test('migra versão 1 para a atual sem perder pastos ou gastos e pode reiniciali
   expect(await db.getAllAsync('SELECT * FROM expense_categories')).toHaveLength(4);
 });
 
+test('migra banco legado (ear_tag e enums em português) para o schema V1.3 e permite cadastrar novos animais', async () => {
+  await db.execAsync(`
+    PRAGMA foreign_keys = OFF;
+    DROP TRIGGER IF EXISTS trg_cattle_death_remove_from_planned_sales;
+    DROP TRIGGER IF EXISTS trg_cattle_delete_remove_from_planned_sales;
+    DROP TRIGGER IF EXISTS cattle_status_requires_pasture_exit;
+    DROP TABLE IF EXISTS cattle;
+    CREATE TABLE cattle (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ear_tag TEXT NOT NULL COLLATE NOCASE CHECK (length(trim(ear_tag)) > 0),
+      sex TEXT NOT NULL CHECK (sex IN ('macho', 'femea')),
+      birth_date TEXT,
+      estimated_age_months INTEGER,
+      breed TEXT NOT NULL CHECK (length(trim(breed)) > 0),
+      notes TEXT,
+      status TEXT NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo', 'vendido', 'morto', 'transferido')),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT INTO cattle (ear_tag, sex, estimated_age_months, breed, status)
+    VALUES ('LEGADO-01', 'macho', 24, 'Nelore', 'ativo');
+    PRAGMA user_version = 4;
+    PRAGMA foreign_keys = ON;
+  `);
+
+  await inicializarBanco(db);
+
+  // Animal legado foi preservado e convertido para V1.3
+  const existentes = await servico.listar();
+  expect(existentes).toHaveLength(1);
+  expect(existentes[0]).toMatchObject({
+    brinco: 'LEGADO-01',
+    sexo: 'male',
+    situacao: 'active',
+  });
+
+  // Novo cadastro funciona sem erro de coluna ou CHECK constraint
+  const novoId = await servico.salvar(entrada);
+  expect(novoId).toBeGreaterThan(1);
+  expect(await servico.listar()).toHaveLength(2);
+});
+
 test('falha na migração faz rollback e permite nova tentativa', async () => {
   await voltarParaVersao1();
   const executar = db.execAsync;

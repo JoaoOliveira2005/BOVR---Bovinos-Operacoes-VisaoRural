@@ -73,6 +73,7 @@ export default function FormularioAnimal() {
         }
       } catch (causa) {
         const msg = mensagemErro(causa);
+        console.error('[FormularioAnimal] Erro ao carregar animal:', { id, mensagem: msg, causa });
         setMensagemErroGeral(msg);
         if (Platform.OS === 'web') {
           window.alert(`Não foi possível carregar: ${msg}`);
@@ -154,6 +155,15 @@ export default function FormularioAnimal() {
 
     if (temErro) {
       const msg = 'Preencha todos os campos obrigatórios para cadastrar o animal.';
+      console.warn('[FormularioAnimal] Validação de campos obrigatórios falhou:', {
+        brinco,
+        sexo,
+        raca,
+        fonteIdade,
+        nascimento,
+        anos,
+        meses,
+      });
       setMensagemErroGeral(msg);
       if (Platform.OS === 'web') {
         window.alert(`Atenção: ${msg}`);
@@ -163,13 +173,25 @@ export default function FormularioAnimal() {
       return;
     }
 
+    const entrada = montarEntrada();
+    console.log('[FormularioAnimal] Salvando animal:', { id, entrada });
+
     setSalvando(true);
     try {
-      await servico.salvar(montarEntrada(), id);
+      const resultadoId = await servico.salvar(entrada, id);
+      console.log('[FormularioAnimal] Animal salvo com sucesso:', { id: id ?? resultadoId });
       // RNF-10 — só volta depois que o salvamento resolveu.
       router.back();
     } catch (causa) {
       const msg = mensagemErro(causa);
+      const causaObj = causa instanceof Error ? { message: causa.message, stack: causa.stack } : causa;
+      console.error('[FormularioAnimal] ERRO CRÍTICO AO SALVAR ANIMAL:', {
+        id,
+        entrada,
+        codigo: causa instanceof ErroDominio ? causa.codigo : 'desconhecido',
+        mensagem: msg,
+        causa: causaObj,
+      });
       setMensagemErroGeral(msg);
 
       if (causa instanceof ErroDominio && causa.codigo === 'duplicado') {
@@ -199,9 +221,11 @@ export default function FormularioAnimal() {
     const executarExclusao = async () => {
       try {
         await servico.excluir(id);
+        console.log('[FormularioAnimal] Animal excluído com sucesso:', { id, brinco });
         router.back();
       } catch (causa) {
         const mensagem = mensagemErro(causa);
+        console.error('[FormularioAnimal] Erro ao excluir animal:', { id, brinco, mensagem, causa });
         if (Platform.OS === 'web') {
           window.alert(`Não foi possível excluir: ${mensagem}`);
         } else {

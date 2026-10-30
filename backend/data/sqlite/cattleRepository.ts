@@ -26,27 +26,42 @@ function mapear(linha: LinhaAnimal): Animal {
   };
 }
 
-function tratarErro(erro: unknown): never {
+function tratarErro(erro: unknown, operacao = 'salvar', contexto?: unknown): never {
   if (erro instanceof ErroDominio) throw erro;
   const mensagem = erro instanceof Error ? erro.message : String(erro);
+  console.error(`[RepositorioAnimaisSqlite] Erro ao ${operacao} animal:`, {
+    mensagem,
+    contexto,
+    erro,
+  });
   if (mensagem.includes('UNIQUE constraint failed')) {
     throw new ErroDominio('duplicado', 'Já existe um animal ativo com esse brinco. Use outro número.');
   }
-  throw new ErroDominio('persistencia', 'Não foi possível salvar o animal.');
+  if (mensagem.includes('CHECK constraint failed')) {
+    throw new ErroDominio(
+      'validacao',
+      `Dados inválidos para o animal (${mensagem}). Verifique os campos preenchidos.`,
+    );
+  }
+  throw new ErroDominio('persistencia', `Não foi possível ${operacao} o animal (${mensagem}).`);
 }
 
 export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
   constructor(private readonly db: SQLiteDatabase) {}
 
   async listar(filtro?: { situacao?: Animal['situacao'] | 'todos' }): Promise<Animal[]> {
-    if (filtro?.situacao && filtro.situacao !== 'todos') {
-      const linhas = await this.db.getAllAsync<LinhaAnimal>(
-        `${SELECT_ANIMAL} WHERE status = ? ORDER BY id DESC`,
-        filtro.situacao,
-      );
-      return linhas.map(mapear);
+    try {
+      if (filtro?.situacao && filtro.situacao !== 'todos') {
+        const linhas = await this.db.getAllAsync<LinhaAnimal>(
+          `${SELECT_ANIMAL} WHERE status = ? ORDER BY id DESC`,
+          filtro.situacao,
+        );
+        return linhas.map(mapear);
+      }
+      return (await this.db.getAllAsync<LinhaAnimal>(`${SELECT_ANIMAL} ORDER BY id DESC`)).map(mapear);
+    } catch (erro) {
+      tratarErro(erro, 'listar', filtro);
     }
-    return (await this.db.getAllAsync<LinhaAnimal>(`${SELECT_ANIMAL} ORDER BY id DESC`)).map(mapear);
   }
 
   async listarAtivos(): Promise<Animal[]> {
@@ -54,48 +69,91 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
   }
 
   async obter(id: number): Promise<Animal | null> {
-    const linha = await this.db.getFirstAsync<LinhaAnimal>(`${SELECT_ANIMAL} WHERE id = ?`, id);
-    return linha ? mapear(linha) : null;
+    try {
+      const linha = await this.db.getFirstAsync<LinhaAnimal>(`${SELECT_ANIMAL} WHERE id = ?`, id);
+      return linha ? mapear(linha) : null;
+    } catch (erro) {
+      tratarErro(erro, 'obter', { id });
+    }
   }
 
   async consultarPorBrinco(brinco: string): Promise<Animal[]> {
-    const linhas = await this.db.getAllAsync<LinhaAnimal>(
-      `${SELECT_ANIMAL} WHERE trim(tag_number) = ? COLLATE NOCASE
-       ORDER BY (status = 'active') DESC, id DESC`, brinco.trim(),
-    );
-    return linhas.map(mapear);
+    try {
+      const linhas = await this.db.getAllAsync<LinhaAnimal>(
+        `${SELECT_ANIMAL} WHERE trim(tag_number) = ? COLLATE NOCASE
+         ORDER BY (status = 'active') DESC, id DESC`, brinco.trim(),
+      );
+      return linhas.map(mapear);
+    } catch (erro) {
+      tratarErro(erro, 'consultar por brinco', { brinco });
+    }
   }
 
   async existeAtivoComBrinco(brinco: string, ignorarId?: number): Promise<boolean> {
-    const linha = await this.db.getFirstAsync<{ id: number }>(
-      `SELECT id FROM cattle WHERE status = 'active' AND trim(tag_number) = ? COLLATE NOCASE
-       AND (? IS NULL OR id <> ?) LIMIT 1`, brinco.trim(), ignorarId ?? null, ignorarId ?? null,
-    );
-    return linha !== null;
+    try {
+      const tag = brinco.trim();
+      const linha =
+        ignorarId !== undefined
+          ? await this.db.getFirstAsync<{ id: number }>(
+              `SELECT id FROM cattle
+               WHERE status = 'active' AND trim(tag_number) = ? COLLATE NOCASE AND id <> ?
+               LIMIT 1`,
+              tag,
+              ignorarId,
+            )
+          : await this.db.getFirstAsync<{ id: number }>(
+              `SELECT id FROM cattle
+               WHERE status = 'active' AND trim(tag_number) = ? COLLATE NOCASE
+               LIMIT 1`,
+              tag,
+            );
+      return linha !== null;
+    } catch (erro) {
+      tratarErro(erro, 'verificar duplicidade de brinco', { brinco, ignorarId });
+    }
   }
 
   async criar(entrada: EntradaAnimal): Promise<number> {
     const animal = validarAnimal(entrada);
     try {
+      const status = entrada.situacao ?? 'active';
       const resultado = await this.db.runAsync(
         `INSERT INTO cattle (tag_number, sex, birth_date, estimated_age_months, breed, notes, status)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        animal.brinco, animal.sexo, animal.dataNascimento, animal.idadeEstimadaMeses,
-        animal.raca, animal.observacoes, entrada.situacao ?? 'active',
+        animal.brinco,
+        animal.sexo,
+        animal.dataNascimento,
+        animal.idadeEstimadaMeses,
+        animal.raca,
+        animal.observacoes,
+        status,
       );
       return resultado.lastInsertRowId;
-    } catch (erro) { tratarErro(erro); }
+    } catch (erro) {
+      tratarErro(erro, 'cadastrar', animal);
+    }
   }
 
   async desconsiderarDeVendasPlanejadas(animalId: number, brinco?: string): Promise<void> {
-    const itens = await this.db.getAllAsync<{ id: number; sale_id: number; weight_kg: number }>(
-      `SELECT si.id, si.sale_id, si.weight_kg
-       FROM sale_items si
-       JOIN sales s ON s.id = si.sale_id
-       WHERE s.sale_type = 'planejada'
-         AND (si.animal_id = ? OR (? IS NOT NULL AND trim(si.ear_tag) = ? COLLATE NOCASE))`,
-      animalId, brinco?.trim() ?? null, brinco?.trim() ?? null,
-    );
+    const tagLimpa = brinco?.trim();
+    const itens = tagLimpa
+      ? await this.db.getAllAsync<{ id: number; sale_id: number; weight_kg: number }>(
+          `SELECT si.id, si.sale_id, si.weight_kg
+           FROM sale_items si
+           JOIN sales s ON s.id = si.sale_id
+           WHERE s.sale_type = 'planejada'
+             AND (si.animal_id = ? OR trim(si.ear_tag) = ? COLLATE NOCASE)`,
+          animalId,
+          tagLimpa,
+        )
+      : await this.db.getAllAsync<{ id: number; sale_id: number; weight_kg: number }>(
+          `SELECT si.id, si.sale_id, si.weight_kg
+           FROM sale_items si
+           JOIN sales s ON s.id = si.sale_id
+           WHERE s.sale_type = 'planejada'
+             AND si.animal_id = ?`,
+          animalId,
+        );
 
     if (itens.length === 0) return;
 
@@ -110,7 +168,7 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
       const itensParaRemover = todosItensDaVenda.filter(
         (it) =>
           it.animal_id === animalId ||
-          (brinco && it.ear_tag.trim().toUpperCase() === brinco.trim().toUpperCase()),
+          (tagLimpa && it.ear_tag.trim().toUpperCase() === tagLimpa.toUpperCase()),
       );
 
       const qtdRestante = todosItensDaVenda.length - itensParaRemover.length;
@@ -168,7 +226,9 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
         );
       }
       if (!resultado.changes) throw new ErroDominio('nao_encontrado', 'Animal não encontrado.');
-    } catch (erro) { tratarErro(erro); }
+    } catch (erro) {
+      tratarErro(erro, 'atualizar', { id, animal });
+    }
   }
 
   async marcarComoMorto(id: number): Promise<void> {
@@ -181,7 +241,9 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
         id,
       );
       if (!resultado.changes) throw new ErroDominio('nao_encontrado', 'Animal não encontrado.');
-    } catch (erro) { tratarErro(erro); }
+    } catch (erro) {
+      tratarErro(erro, 'registrar morte de', { id });
+    }
   }
 
   async excluir(id: number): Promise<void> {
@@ -192,6 +254,8 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
       }
       const resultado = await this.db.runAsync('DELETE FROM cattle WHERE id = ?', id);
       if (!resultado.changes) throw new ErroDominio('nao_encontrado', 'Animal não encontrado.');
-    } catch (erro) { tratarErro(erro); }
+    } catch (erro) {
+      tratarErro(erro, 'excluir', { id });
+    }
   }
 }
