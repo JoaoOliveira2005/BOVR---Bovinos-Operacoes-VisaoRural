@@ -38,8 +38,19 @@ function tratarErro(erro: unknown): never {
 export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
   constructor(private readonly db: SQLiteDatabase) {}
 
-  async listar(): Promise<Animal[]> {
+  async listar(filtro?: { situacao?: Animal['situacao'] | 'todos' }): Promise<Animal[]> {
+    if (filtro?.situacao && filtro.situacao !== 'todos') {
+      const linhas = await this.db.getAllAsync<LinhaAnimal>(
+        `${SELECT_ANIMAL} WHERE status = ? ORDER BY id DESC`,
+        filtro.situacao,
+      );
+      return linhas.map(mapear);
+    }
     return (await this.db.getAllAsync<LinhaAnimal>(`${SELECT_ANIMAL} ORDER BY id DESC`)).map(mapear);
+  }
+
+  async listarAtivos(): Promise<Animal[]> {
+    return this.listar({ situacao: 'active' });
   }
 
   async obter(id: number): Promise<Animal | null> {
@@ -67,23 +78,107 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
     const animal = validarAnimal(entrada);
     try {
       const resultado = await this.db.runAsync(
-        `INSERT INTO cattle (tag_number, sex, birth_date, estimated_age_months, breed, notes)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO cattle (tag_number, sex, birth_date, estimated_age_months, breed, notes, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         animal.brinco, animal.sexo, animal.dataNascimento, animal.idadeEstimadaMeses,
-        animal.raca, animal.observacoes,
+        animal.raca, animal.observacoes, entrada.situacao ?? 'active',
       );
       return resultado.lastInsertRowId;
     } catch (erro) { tratarErro(erro); }
   }
 
+  async desconsiderarDeVendasPlanejadas(animalId: number, brinco?: string): Promise<void> {
+    const itens = await this.db.getAllAsync<{ id: number; sale_id: number; weight_kg: number }>(
+      `SELECT si.id, si.sale_id, si.weight_kg
+       FROM sale_items si
+       JOIN sales s ON s.id = si.sale_id
+       WHERE s.sale_type = 'planejada'
+         AND (si.animal_id = ? OR (? IS NOT NULL AND trim(si.ear_tag) = ? COLLATE NOCASE))`,
+      animalId, brinco?.trim() ?? null, brinco?.trim() ?? null,
+    );
+
+    if (itens.length === 0) return;
+
+    const saleIds = Array.from(new Set(itens.map((it) => it.sale_id)));
+
+    for (const saleId of saleIds) {
+      const todosItensDaVenda = await this.db.getAllAsync<{ id: number; animal_id: number | null; ear_tag: string }>(
+        `SELECT id, animal_id, ear_tag FROM sale_items WHERE sale_id = ?`,
+        saleId,
+      );
+
+      const itensParaRemover = todosItensDaVenda.filter(
+        (it) =>
+          it.animal_id === animalId ||
+          (brinco && it.ear_tag.trim().toUpperCase() === brinco.trim().toUpperCase()),
+      );
+
+      const qtdRestante = todosItensDaVenda.length - itensParaRemover.length;
+
+      if (qtdRestante <= 0) {
+        await this.db.runAsync(`DELETE FROM sales WHERE id = ?`, saleId);
+      } else {
+        const placeholders = itensParaRemover.map(() => '?').join(',');
+        await this.db.runAsync(
+          `DELETE FROM sale_items WHERE id IN (${placeholders})`,
+          ...itensParaRemover.map((it) => it.id),
+        );
+
+        const vendaAtual = await this.db.getFirstAsync<{ gross_value_cents: number }>(
+          `SELECT gross_value_cents FROM sales WHERE id = ?`,
+          saleId,
+        );
+        if (vendaAtual) {
+          const novoValor = Math.max(
+            1,
+            Math.round((vendaAtual.gross_value_cents * qtdRestante) / todosItensDaVenda.length),
+          );
+          await this.db.runAsync(
+            `UPDATE sales SET gross_value_cents = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            novoValor,
+            saleId,
+          );
+        }
+      }
+    }
+  }
+
   async atualizar(id: number, entrada: EntradaAnimal): Promise<void> {
     const animal = validarAnimal(entrada);
     try {
+      if (entrada.situacao === 'dead') {
+        const existente = await this.obter(id);
+        await this.desconsiderarDeVendasPlanejadas(id, existente?.brinco ?? animal.brinco);
+      }
+
+      let resultado;
+      if (entrada.situacao) {
+        resultado = await this.db.runAsync(
+          `UPDATE cattle SET tag_number = ?, sex = ?, birth_date = ?, estimated_age_months = ?,
+           breed = ?, notes = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          animal.brinco, animal.sexo, animal.dataNascimento, animal.idadeEstimadaMeses,
+          animal.raca, animal.observacoes, entrada.situacao, id,
+        );
+      } else {
+        resultado = await this.db.runAsync(
+          `UPDATE cattle SET tag_number = ?, sex = ?, birth_date = ?, estimated_age_months = ?,
+           breed = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          animal.brinco, animal.sexo, animal.dataNascimento, animal.idadeEstimadaMeses,
+          animal.raca, animal.observacoes, id,
+        );
+      }
+      if (!resultado.changes) throw new ErroDominio('nao_encontrado', 'Animal não encontrado.');
+    } catch (erro) { tratarErro(erro); }
+  }
+
+  async marcarComoMorto(id: number): Promise<void> {
+    try {
+      const animal = await this.obter(id);
+      if (!animal) throw new ErroDominio('nao_encontrado', 'Animal não encontrado.');
+      await this.desconsiderarDeVendasPlanejadas(id, animal.brinco);
       const resultado = await this.db.runAsync(
-        `UPDATE cattle SET tag_number = ?, sex = ?, birth_date = ?, estimated_age_months = ?,
-         breed = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        animal.brinco, animal.sexo, animal.dataNascimento, animal.idadeEstimadaMeses,
-        animal.raca, animal.observacoes, id,
+        `UPDATE cattle SET status = 'dead', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        id,
       );
       if (!resultado.changes) throw new ErroDominio('nao_encontrado', 'Animal não encontrado.');
     } catch (erro) { tratarErro(erro); }
@@ -91,6 +186,10 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
 
   async excluir(id: number): Promise<void> {
     try {
+      const animal = await this.obter(id);
+      if (animal) {
+        await this.desconsiderarDeVendasPlanejadas(id, animal.brinco);
+      }
       const resultado = await this.db.runAsync('DELETE FROM cattle WHERE id = ?', id);
       if (!resultado.changes) throw new ErroDominio('nao_encontrado', 'Animal não encontrado.');
     } catch (erro) { tratarErro(erro); }

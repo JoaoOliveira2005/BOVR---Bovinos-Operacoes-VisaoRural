@@ -8,8 +8,11 @@ export function converterErroSqlite(erro: unknown, contexto: string): never {
   if (mensagem.includes('FOREIGN KEY constraint failed')) {
     throw new ErroDominio(
       'em_uso',
-      `${contexto} está em uso. Reassocie os registros relacionados antes de excluir.`,
+      `${contexto} possui vínculos obrigatórios e não pode ser processado no momento.`,
     );
   }
-  throw new ErroDominio('persistencia', `Não foi possível salvar ${contexto.toLowerCase()}.`);
+  if (mensagem.includes('CHECK constraint failed')) {
+    throw new ErroDominio('validacao', `Dados inválidos para ${contexto.toLowerCase()}: verifique os valores informados.`);
+  }
+  throw new ErroDominio('persistencia', `Não foi possível salvar ${contexto.toLowerCase()}: ${mensagem}`);
 }
