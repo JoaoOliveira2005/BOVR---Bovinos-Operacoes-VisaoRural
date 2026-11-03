@@ -25,10 +25,13 @@ export type Animal = {
   situacao: SituacaoAnimal;
 };
 
-export type EntradaAnimal = Omit<Animal, 'id' | 'situacao'>;
+export type EntradaAnimal = Omit<Animal, 'id' | 'situacao'> & {
+  situacao?: SituacaoAnimal;
+};
 
 export interface RepositorioAnimais {
-  listar(): Promise<Animal[]>;
+  listar(filtro?: { situacao?: SituacaoAnimal | 'todos' }): Promise<Animal[]>;
+  listarAtivos(): Promise<Animal[]>;
   obter(id: number): Promise<Animal | null>;
   /**
    * RF-01.1 — procura animal **ativo** com este brinco.
@@ -40,5 +43,6 @@ export interface RepositorioAnimais {
   existeAtivoComBrinco(brinco: string, ignorarId?: number): Promise<boolean>;
   criar(entrada: EntradaAnimal): Promise<number>;
   atualizar(id: number, entrada: EntradaAnimal): Promise<void>;
+  marcarComoMorto(id: number): Promise<void>;
   excluir(id: number): Promise<void>;
 }

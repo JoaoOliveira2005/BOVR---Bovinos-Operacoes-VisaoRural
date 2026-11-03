@@ -13,14 +13,14 @@ export async function transacaoPastos<T>(
     // nesta transação. FK precisa ser ativada ANTES do BEGIN em cada conexão.
     const tx = abrirConexao ? await abrirConexao() : db;
     try {
-      await tx.execAsync('PRAGMA foreign_keys = ON;');
+      await tx.execAsync('PRAGMA foreign_keys = ON;').catch(() => undefined);
       await tx.execAsync('BEGIN IMMEDIATE;');
       try {
         const resultado = await executar(tx);
         await tx.execAsync('COMMIT;');
         return resultado;
       } catch (erro) {
-        await tx.execAsync('ROLLBACK;');
+        await tx.execAsync('ROLLBACK;').catch(() => undefined);
         throw erro;
       }
     } finally { if (abrirConexao) await tx.closeAsync(); }
