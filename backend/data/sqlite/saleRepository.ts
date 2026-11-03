@@ -26,7 +26,7 @@ type LinhaItem = {
   id: number;
   sale_id: number;
   animal_id: number | null;
-  ear_tag: string;
+  tag_number: string;
   weight_kg: number;
 };
 
@@ -60,7 +60,7 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
     if (filtro?.brinco) {
       condicoes.push(`EXISTS (
         SELECT 1 FROM sale_items si
-        WHERE si.sale_id = s.id AND trim(si.ear_tag) = ? COLLATE NOCASE
+        WHERE si.sale_id = s.id AND trim(si.tag_number) = ? COLLATE NOCASE
       )`);
       parametros.push(filtro.brinco.trim());
     }
@@ -78,7 +78,7 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
     const ids = linhas.map((l) => l.id);
     const placeholders = ids.map(() => '?').join(',');
     const itens = await this.db.getAllAsync<LinhaItem>(
-      `SELECT id, sale_id, animal_id, ear_tag, weight_kg
+      `SELECT id, sale_id, animal_id, tag_number, weight_kg
        FROM sale_items
        WHERE sale_id IN (${placeholders})
        ORDER BY id ASC`,
@@ -91,7 +91,7 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
       lista.push({
         id: item.id,
         animalId: item.animal_id,
-        brinco: item.ear_tag,
+        brinco: item.tag_number,
         pesoKg: item.weight_kg,
       });
       itensPorVenda.set(item.sale_id, lista);
@@ -128,7 +128,7 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
     if (!linha) return null;
 
     const itens = await this.db.getAllAsync<LinhaItem>(
-      `SELECT id, sale_id, animal_id, ear_tag, weight_kg
+      `SELECT id, sale_id, animal_id, tag_number, weight_kg
        FROM sale_items
        WHERE sale_id = ?
        ORDER BY id ASC`,
@@ -138,7 +138,7 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
     const itensMapeados: ItemVenda[] = itens.map((item) => ({
       id: item.id,
       animalId: item.animal_id,
-      brinco: item.ear_tag,
+      brinco: item.tag_number,
       pesoKg: item.weight_kg,
     }));
 
@@ -190,7 +190,7 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
         }
 
         await this.db.runAsync(
-          `INSERT INTO sale_items (sale_id, animal_id, ear_tag, weight_kg)
+          `INSERT INTO sale_items (sale_id, animal_id, tag_number, weight_kg)
            VALUES (?, ?, ?, ?)`,
           saleId,
           animalId,
@@ -217,7 +217,7 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
           await this.db.runAsync(
             `DELETE FROM sale_items
              WHERE sale_id IN (SELECT id FROM sales WHERE sale_type = 'planejada')
-               AND (animal_id = ? OR trim(ear_tag) = ? COLLATE NOCASE)`,
+               AND (animal_id = ? OR trim(tag_number) = ? COLLATE NOCASE)`,
             animalId,
             item.brinco.trim(),
           );
@@ -248,8 +248,8 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
         id,
       );
 
-      const itensAntigos = await this.db.getAllAsync<{ animal_id: number | null; ear_tag: string }>(
-        `SELECT animal_id, ear_tag FROM sale_items WHERE sale_id = ?`,
+      const itensAntigos = await this.db.getAllAsync<{ animal_id: number | null; tag_number: string }>(
+        `SELECT animal_id, tag_number FROM sale_items WHERE sale_id = ?`,
         id,
       );
 
@@ -283,7 +283,7 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
             await this.db.runAsync(
               `UPDATE cattle SET status = 'active', updated_at = CURRENT_TIMESTAMP
                WHERE trim(tag_number) = ? COLLATE NOCASE AND status = 'sold'`,
-              it.ear_tag.trim(),
+              it.tag_number.trim(),
             );
           }
         }
@@ -305,7 +305,7 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
         }
 
         await this.db.runAsync(
-          `INSERT INTO sale_items (sale_id, animal_id, ear_tag, weight_kg)
+          `INSERT INTO sale_items (sale_id, animal_id, tag_number, weight_kg)
            VALUES (?, ?, ?, ?)`,
           id,
           animalId,
@@ -331,7 +331,7 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
           await this.db.runAsync(
             `DELETE FROM sale_items
              WHERE sale_id IN (SELECT s.id FROM sales s WHERE s.sale_type = 'planejada' AND s.id <> ?)
-               AND (animal_id = ? OR trim(ear_tag) = ? COLLATE NOCASE)`,
+               AND (animal_id = ? OR trim(tag_number) = ? COLLATE NOCASE)`,
             id,
             animalId,
             item.brinco.trim(),
@@ -369,8 +369,8 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
 
       // Se a venda for realizada, devolve animais vendidos para ativos ao excluir a venda
       if (venda.sale_type === 'realizada') {
-        const itens = await this.db.getAllAsync<{ animal_id: number | null; ear_tag: string }>(
-          `SELECT animal_id, ear_tag FROM sale_items WHERE sale_id = ?`,
+        const itens = await this.db.getAllAsync<{ animal_id: number | null; tag_number: string }>(
+          `SELECT animal_id, tag_number FROM sale_items WHERE sale_id = ?`,
           id,
         );
         for (const it of itens) {
@@ -384,7 +384,7 @@ export class RepositorioVendasSqlite implements RepositorioVendas {
             await this.db.runAsync(
               `UPDATE cattle SET status = 'active', updated_at = CURRENT_TIMESTAMP
                WHERE trim(tag_number) = ? COLLATE NOCASE AND status = 'sold'`,
-              it.ear_tag.trim(),
+              it.tag_number.trim(),
             );
           }
         }

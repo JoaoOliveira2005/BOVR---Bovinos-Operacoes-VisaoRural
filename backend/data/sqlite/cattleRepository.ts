@@ -142,7 +142,7 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
            FROM sale_items si
            JOIN sales s ON s.id = si.sale_id
            WHERE s.sale_type = 'planejada'
-             AND (si.animal_id = ? OR trim(si.ear_tag) = ? COLLATE NOCASE)`,
+             AND (si.animal_id = ? OR trim(si.tag_number) = ? COLLATE NOCASE)`,
           animalId,
           tagLimpa,
         )
@@ -160,15 +160,15 @@ export class RepositorioAnimaisSqlite implements RepositorioConsultaAnimais {
     const saleIds = Array.from(new Set(itens.map((it) => it.sale_id)));
 
     for (const saleId of saleIds) {
-      const todosItensDaVenda = await this.db.getAllAsync<{ id: number; animal_id: number | null; ear_tag: string }>(
-        `SELECT id, animal_id, ear_tag FROM sale_items WHERE sale_id = ?`,
+      const todosItensDaVenda = await this.db.getAllAsync<{ id: number; animal_id: number | null; tag_number: string }>(
+        `SELECT id, animal_id, tag_number FROM sale_items WHERE sale_id = ?`,
         saleId,
       );
 
       const itensParaRemover = todosItensDaVenda.filter(
         (it) =>
           it.animal_id === animalId ||
-          (tagLimpa && it.ear_tag.trim().toUpperCase() === tagLimpa.toUpperCase()),
+          (tagLimpa && it.tag_number.trim().toUpperCase() === tagLimpa.toUpperCase()),
       );
 
       const qtdRestante = todosItensDaVenda.length - itensParaRemover.length;

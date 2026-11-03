@@ -166,7 +166,7 @@ AFTER UPDATE OF status ON cattle
 WHEN NEW.status = 'dead'
 BEGIN
   DELETE FROM sale_items
-  WHERE (animal_id = NEW.id OR trim(ear_tag) = trim(NEW.tag_number) COLLATE NOCASE)
+  WHERE (animal_id = NEW.id OR trim(tag_number) = trim(NEW.tag_number) COLLATE NOCASE)
     AND sale_id IN (SELECT id FROM sales WHERE sale_type = 'planejada');
 END;
 
@@ -175,7 +175,7 @@ CREATE TRIGGER trg_cattle_delete_remove_from_planned_sales
 AFTER DELETE ON cattle
 BEGIN
   DELETE FROM sale_items
-  WHERE (animal_id = OLD.id OR trim(ear_tag) = trim(OLD.tag_number) COLLATE NOCASE)
+  WHERE (animal_id = OLD.id OR trim(tag_number) = trim(OLD.tag_number) COLLATE NOCASE)
     AND sale_id IN (SELECT id FROM sales WHERE sale_type = 'planejada');
 END;
 
@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS sale_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   sale_id INTEGER NOT NULL,
   animal_id INTEGER,
-  ear_tag TEXT NOT NULL,
+  tag_number TEXT NOT NULL,
   weight_kg REAL NOT NULL CHECK (weight_kg > 0),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -219,7 +219,7 @@ CREATE INDEX IF NOT EXISTS idx_sales_type ON sales(sale_type);
 CREATE INDEX IF NOT EXISTS idx_sales_buyer ON sales(buyer COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_animal ON sale_items(animal_id);
-CREATE INDEX IF NOT EXISTS idx_sale_items_ear_tag ON sale_items(ear_tag COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_sale_items_tag_number ON sale_items(tag_number COLLATE NOCASE);
 
 ${TRIGGERS_VENDAS_V13}
 `;
@@ -527,6 +527,15 @@ async function garantirTabelasCriticas(db: SQLiteDatabase): Promise<void> {
         ended_on TEXT CHECK (ended_on IS NULL OR (ended_on >= started_on AND ended_on GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'))
       );
     `);
+  }
+
+  // Compatibilidade: bancos criados antes da Fase C podem ter sale_items.ear_tag.
+  if (nomes.has('sale_items')) {
+    const colunasSaleItems = await db.getAllAsync<{ name: string }>('PRAGMA table_info(sale_items);');
+    const nomesSaleItems = new Set(colunasSaleItems.map((c) => c.name));
+    if (nomesSaleItems.has('ear_tag') && !nomesSaleItems.has('tag_number')) {
+      await db.execAsync('ALTER TABLE sale_items RENAME COLUMN ear_tag TO tag_number;');
+    }
   }
 
   if (!nomes.has('sales') && nomes.has('cattle')) {

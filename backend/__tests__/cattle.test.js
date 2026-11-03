@@ -230,8 +230,8 @@ test('morte de animal desconsidera o animal de vendas planejadas automaticamente
     "INSERT INTO sales (buyer, sale_date, gross_value_cents, sale_type) VALUES ('Comprador', '2026-11-01', 1000000, 'planejada')",
   );
   const saleId = (await db.getFirstAsync('SELECT last_insert_rowid() as id')).id;
-  await db.runAsync('INSERT INTO sale_items (sale_id, animal_id, ear_tag, weight_kg) VALUES (?, ?, ?, ?)', saleId, id1, 'BOI-1', 500);
-  await db.runAsync('INSERT INTO sale_items (sale_id, animal_id, ear_tag, weight_kg) VALUES (?, ?, ?, ?)', saleId, id2, 'BOI-2', 500);
+  await db.runAsync('INSERT INTO sale_items (sale_id, animal_id, tag_number, weight_kg) VALUES (?, ?, ?, ?)', saleId, id1, 'BOI-1', 500);
+  await db.runAsync('INSERT INTO sale_items (sale_id, animal_id, tag_number, weight_kg) VALUES (?, ?, ?, ?)', saleId, id2, 'BOI-2', 500);
 
   // Morte do primeiro animal
   await servico.marcarComoMorto(id1);
@@ -244,7 +244,7 @@ test('morte de animal desconsidera o animal de vendas planejadas automaticamente
   // A venda planejada agora deve ter apenas o BOI-2 e valor recalculado
   const itensRestantes = await db.getAllAsync('SELECT * FROM sale_items WHERE sale_id = ?', saleId);
   expect(itensRestantes).toHaveLength(1);
-  expect(itensRestantes[0].ear_tag).toBe('BOI-2');
+  expect(itensRestantes[0].tag_number).toBe('BOI-2');
 
   const vendaAtualizada = await db.getFirstAsync('SELECT * FROM sales WHERE id = ?', saleId);
   expect(vendaAtualizada.gross_value_cents).toBe(500000);

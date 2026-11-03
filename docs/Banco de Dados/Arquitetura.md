@@ -62,6 +62,9 @@ flowchart TB
   (RF-21, P-22); pesos em **arrobas (@)**, sem conversão com kg (RD-04).
 - As categorias Água, Ração, Mão de obra e Infraestrutura são seeds protegidos.
 - Registros auxiliares em uso não são excluídos em cascata.
+- **Pendência de implementação (Opção B):** a implementação atual de vendas usa
+  `sale_type` e pesos em kg; a refatoração para o modelo V1.3 (status 0/1 e
+  arrobas) está planejada e ainda não foi executada.
 
 ## Convenções de nomenclatura (V1.3)
 
@@ -273,7 +276,7 @@ cardinalidades do diagrama espelham a tabela em
   enquanto o pasto estiver descansando. Índice único parcial
   `idx_pasture_rest_open` garante **no máximo um descanso aberto por pasto**.
 - Trigger `cattle_status_requires_pasture_exit`: `BEFORE UPDATE OF status ON cattle`
-  aborta se `NEW.status <> 'ativo' AND NEW.pasture_id IS NOT NULL` — obriga
+  aborta se `NEW.status <> 'active' AND NEW.pasture_id IS NOT NULL` — obriga
   saída datada antes de vender/morrer/transferir, para não perder o início do
   descanso (RF-18.3).
 - `pasture_inspections.quality` é gravada a cada vistoria (histórico RF-15.3),
