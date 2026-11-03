@@ -1,37 +1,42 @@
-export type TipoVenda = 'realizada' | 'planejada';
+export type TipoVenda = 'planejada' | 'realizada';
 
 export type ItemVenda = {
   id?: number;
   animalId?: number | null;
   brinco: string;
-  pesoKg: number;
+  pricePerArrobaCentavos: number;
+  plannedWeightArroba?: number | null;
+  plannedTotalCentavos?: number | null;
+  actualWeightArroba?: number | null;
+  actualTotalCentavos?: number | null;
 };
 
 export type EntradaItemVenda = {
   animalId?: number | null;
   brinco: string;
-  pesoKg: number;
+  pricePerArrobaCentavos: number;
+  plannedWeightArroba?: number | null;
+  actualWeightArroba?: number | null;
 };
 
 export type Venda = {
   id: number;
   tipo: TipoVenda;
-  comprador: string;
-  data: string; // YYYY-MM-DD
-  valorBrutoCentavos: number;
+  comprador: string | null;
+  data: string | null;
+  valorBrutoCentavos: number | null;
   observacoes: string | null;
   itens: ItemVenda[];
   quantidadeAnimais: number;
-  pesoTotalKg: number;
   criadoEm?: string;
   atualizadoEm?: string;
 };
 
 export type EntradaVenda = {
   tipo: TipoVenda;
-  comprador: string;
-  data: string;
-  valorBrutoCentavos: number;
+  comprador?: string | null;
+  data?: string | null;
+  valorBrutoCentavos?: number | null;
   observacoes?: string | null;
   itens: EntradaItemVenda[];
 };
@@ -50,4 +55,6 @@ export interface RepositorioVendas {
   criar(entrada: EntradaVenda): Promise<number>;
   atualizar(id: number, entrada: EntradaVenda): Promise<void>;
   excluir(id: number): Promise<void>;
+  marcarAnimalMorto(vendaId: number, brinco: string): Promise<void>;
+  removerAnimal(vendaId: number, brinco: string): Promise<void>;
 }

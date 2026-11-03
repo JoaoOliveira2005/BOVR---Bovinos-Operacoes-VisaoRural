@@ -147,7 +147,7 @@ vender/morrer/transferir, preservando o início do descanso.
 | `status` | TEXT | NÃO | `'under_treatment'` | `CHECK IN ('under_treatment','recovered','closed')` | Situação atual | Situação |
 | `origin` | TEXT | NÃO | `'case'` | `CHECK IN ('case','injury_note')` | Ocorrência ou observação de machucado | Tipo |
 
-### `sales` — venda planejada (0) → realizada (1) (RF-19, RF-21) — tabela única — prevista (não implementada)
+### `sales` — venda planejada (0) → realizada (1) (RF-19, RF-21) — tabela única — implementada (migração 5)
 
 | Coluna | Tipo | Nulo? | Padrão | Restrição | Significado | Rótulo pt-BR |
 |---|---|---|---|---|---|---|
@@ -164,7 +164,7 @@ Nulos permitidos apenas com `status = 0` (RF-19.1 exige todos os campos na
 realização); a obrigatoriedade na virada 0→1 é validada pela aplicação.
 Excluir a venda não reverte a situação dos animais (RF-21.5).
 
-### `sale_items` — itens da venda planejada e realizada (RF-19.1/19.2, RF-21.2/21.4, RD-04) — prevista (não implementada)
+### `sale_items` — itens da venda planejada e realizada (RF-19.1/19.2, RF-21.2/21.4, RD-04) — implementada (migração 5)
 
 | Coluna | Tipo | Nulo? | Padrão | Restrição | Significado | Rótulo pt-BR |
 |---|---|---|---|---|---|---|

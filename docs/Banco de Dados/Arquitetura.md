@@ -62,9 +62,6 @@ flowchart TB
   (RF-21, P-22); pesos em **arrobas (@)**, sem conversão com kg (RD-04).
 - As categorias Água, Ração, Mão de obra e Infraestrutura são seeds protegidos.
 - Registros auxiliares em uso não são excluídos em cascata.
-- **Pendência de implementação (Opção B):** a implementação atual de vendas usa
-  `sale_type` e pesos em kg; a refatoração para o modelo V1.3 (status 0/1 e
-  arrobas) está planejada e ainda não foi executada.
 
 ## Convenções de nomenclatura (V1.3)
 

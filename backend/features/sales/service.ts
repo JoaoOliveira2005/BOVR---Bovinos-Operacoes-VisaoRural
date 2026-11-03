@@ -28,14 +28,37 @@ export class ServicoVendas {
     return this.repositorio.excluir(id);
   }
 
+  marcarAnimalMorto(vendaId: number, brinco: string): Promise<void> {
+    return this.repositorio.marcarAnimalMorto(vendaId, brinco);
+  }
+
+  removerAnimal(vendaId: number, brinco: string): Promise<void> {
+    return this.repositorio.removerAnimal(vendaId, brinco);
+  }
+
+  realizarVenda(id: number, itensComPesoReal: Array<{ brinco: string; actualWeightArroba: number }>): Promise<void> {
+    return this.repositorio.atualizar(id, {
+      tipo: 'realizada',
+      itens: itensComPesoReal.map((item) => ({
+        brinco: item.brinco,
+        pricePerArrobaCentavos: 0,
+        actualWeightArroba: item.actualWeightArroba,
+      })),
+    });
+  }
+
   calcularResumo(vendas: Venda[]) {
     return vendas.reduce(
-      (acc, v) => ({
-        totalCentavos: acc.totalCentavos + v.valorBrutoCentavos,
-        totalAnimais: acc.totalAnimais + v.quantidadeAnimais,
-        pesoTotalKg: acc.pesoTotalKg + v.pesoTotalKg,
-      }),
-      { totalCentavos: 0, totalAnimais: 0, pesoTotalKg: 0 },
+      (acc, v) => {
+        const peso = v.itens.reduce((s, it) => s + (it.actualWeightArroba ?? it.plannedWeightArroba ?? 0), 0);
+        const total = v.valorBrutoCentavos ?? v.itens.reduce((s, it) => s + (it.actualTotalCentavos ?? it.plannedTotalCentavos ?? 0), 0);
+        return {
+          totalCentavos: acc.totalCentavos + total,
+          totalAnimais: acc.totalAnimais + v.quantidadeAnimais,
+          pesoTotalArrobas: acc.pesoTotalArrobas + peso,
+        };
+      },
+      { totalCentavos: 0, totalAnimais: 0, pesoTotalArrobas: 0 },
     );
   }
 }

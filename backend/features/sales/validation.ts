@@ -17,45 +17,62 @@ export function validarItemVenda(item: EntradaItemVenda, indice?: number): Entra
     throw new ErroDominio('validacao', `${prefixo}Informe o número do brinco do animal.`);
   }
 
-  if (typeof item.pesoKg !== 'number' || !Number.isFinite(item.pesoKg) || item.pesoKg <= 0) {
-    throw new ErroDominio('validacao', `${prefixo}O peso do animal deve ser maior que zero (em kg).`);
+  if (
+    typeof item.pricePerArrobaCentavos !== 'number' ||
+    !Number.isInteger(item.pricePerArrobaCentavos) ||
+    item.pricePerArrobaCentavos <= 0
+  ) {
+    throw new ErroDominio('validacao', `${prefixo}Informe o Valor@ em centavos, maior que zero.`);
+  }
+
+  let plannedWeightArroba: number | null = null;
+  if (item.plannedWeightArroba !== null && item.plannedWeightArroba !== undefined) {
+    if (typeof item.plannedWeightArroba !== 'number' || !Number.isFinite(item.plannedWeightArroba) || item.plannedWeightArroba <= 0) {
+      throw new ErroDominio('validacao', `${prefixo}O Peso@ planejado deve ser maior que zero.`);
+    }
+    plannedWeightArroba = Number(item.plannedWeightArroba.toFixed(2));
+  }
+
+  let actualWeightArroba: number | null = null;
+  if (item.actualWeightArroba !== null && item.actualWeightArroba !== undefined) {
+    if (typeof item.actualWeightArroba !== 'number' || !Number.isFinite(item.actualWeightArroba) || item.actualWeightArroba <= 0) {
+      throw new ErroDominio('validacao', `${prefixo}O Peso@ real deve ser maior que zero.`);
+    }
+    actualWeightArroba = Number(item.actualWeightArroba.toFixed(2));
   }
 
   return {
     animalId: item.animalId ?? null,
     brinco,
-    pesoKg: Number(item.pesoKg.toFixed(2)),
+    pricePerArrobaCentavos: item.pricePerArrobaCentavos,
+    plannedWeightArroba,
+    actualWeightArroba,
   };
 }
 
 export function validarVenda(entrada: EntradaVenda): EntradaVenda {
-  const comprador = entrada.comprador?.trim();
-  if (!comprador) {
-    throw new ErroDominio('validacao', 'Informe o nome do comprador.');
+  if (entrada.tipo !== 'planejada' && entrada.tipo !== 'realizada') {
+    throw new ErroDominio('validacao', 'Tipo de venda inválido. Deve ser planejada ou realizada.');
   }
 
-  const data = entrada.data?.trim();
-  if (!data || !dataValida(data)) {
+  const comprador = entrada.comprador?.trim() || null;
+  const data = entrada.data?.trim() || null;
+
+  if (entrada.tipo === 'realizada') {
+    if (!comprador) {
+      throw new ErroDominio('validacao', 'Informe o nome do comprador.');
+    }
+    if (!data || !dataValida(data)) {
+      throw new ErroDominio('validacao', 'Informe uma data válida no formato DD/MM/AAAA.');
+    }
+  } else if (data && !dataValida(data)) {
     throw new ErroDominio('validacao', 'Informe uma data válida no formato DD/MM/AAAA.');
-  }
-
-  if (
-    typeof entrada.valorBrutoCentavos !== 'number' ||
-    !Number.isInteger(entrada.valorBrutoCentavos) ||
-    entrada.valorBrutoCentavos <= 0
-  ) {
-    throw new ErroDominio('validacao', 'O valor bruto da venda deve ser maior que zero.');
-  }
-
-  if (entrada.tipo !== 'realizada' && entrada.tipo !== 'planejada') {
-    throw new ErroDominio('validacao', 'Tipo de venda inválido. Deve ser realizada ou planejada.');
   }
 
   if (!Array.isArray(entrada.itens) || entrada.itens.length === 0) {
     throw new ErroDominio('validacao', 'Adicione pelo menos um animal à venda.');
   }
 
-  // Verifica brincos duplicados dentro da mesma venda
   const brincosVistos = new Set<string>();
   const itensValidados = entrada.itens.map((item, idx) => {
     const itemValido = validarItemVenda(item, idx);
@@ -73,7 +90,7 @@ export function validarVenda(entrada: EntradaVenda): EntradaVenda {
     tipo: entrada.tipo,
     comprador,
     data,
-    valorBrutoCentavos: entrada.valorBrutoCentavos,
+    valorBrutoCentavos: entrada.valorBrutoCentavos ?? null,
     observacoes,
     itens: itensValidados,
   };

@@ -63,8 +63,8 @@ export default function TelaVendas() {
       }
     };
 
-    const textoConfirmacao = `A venda para “${venda.comprador}” no valor de ${moeda(
-      venda.valorBrutoCentavos / 100,
+    const textoConfirmacao = `A venda para “${venda.comprador ?? ''}” no valor de ${moeda(
+      (venda.valorBrutoCentavos ?? 0) / 100,
     )} será excluída definitivamente.`;
 
     if (Platform.OS === 'web') {
@@ -86,7 +86,7 @@ export default function TelaVendas() {
         return false;
       }
       if (termo) {
-        const bateComprador = v.comprador.toLowerCase().includes(termo);
+        const bateComprador = (v.comprador ?? '').toLowerCase().includes(termo);
         const bateBrinco = v.itens.some((it) => it.brinco.toLowerCase().includes(termo));
         if (!bateComprador && !bateBrinco) return false;
       }
@@ -95,9 +95,9 @@ export default function TelaVendas() {
   }, [vendas, abaAtiva, busca]);
 
   const resumo = useMemo(() => {
-    const totalCentavos = vendasFiltradas.reduce((acc, v) => acc + v.valorBrutoCentavos, 0);
+    const totalCentavos = vendasFiltradas.reduce((acc, v) => acc + (v.valorBrutoCentavos ?? 0), 0);
     const totalCabecas = vendasFiltradas.reduce((acc, v) => acc + v.quantidadeAnimais, 0);
-    const pesoTotal = vendasFiltradas.reduce((acc, v) => acc + v.pesoTotalKg, 0);
+    const pesoTotal = 0;
     return {
       totalCentavos,
       totalCabecas,
@@ -192,11 +192,11 @@ export default function TelaVendas() {
               const expandido = expandidoId === venda.id;
               const precoMedioPorCabeca =
                 venda.quantidadeAnimais > 0
-                  ? venda.valorBrutoCentavos / 100 / venda.quantidadeAnimais
+                  ? (venda.valorBrutoCentavos ?? 0) / 100 / venda.quantidadeAnimais
                   : 0;
               const pesoMedio =
                 venda.quantidadeAnimais > 0
-                  ? venda.pesoTotalKg / venda.quantidadeAnimais
+                  ? 0 / venda.quantidadeAnimais
                   : 0;
 
               return (
@@ -204,9 +204,9 @@ export default function TelaVendas() {
                   {/* Cabeçalho da Venda */}
                   <View style={estilos.cabecalhoVenda}>
                     <View style={estilos.infoComprador}>
-                      <Text style={estilos.nomeComprador}>{venda.comprador}</Text>
+                      <Text style={estilos.nomeComprador}>{venda.comprador ?? ''}</Text>
                       <Text style={estilos.dataVenda}>
-                        {isoParaData(venda.data)}
+                        {isoParaData(venda.data ?? '')}
                       </Text>
                     </View>
                     <Badge
@@ -218,10 +218,10 @@ export default function TelaVendas() {
                   {/* Valores e Métricas */}
                   <View style={estilos.valoresLinha}>
                     <Text style={estilos.valorBruto}>
-                      {moeda(venda.valorBrutoCentavos / 100)}
+                      {moeda((venda.valorBrutoCentavos ?? 0) / 100)}
                     </Text>
                     <Text style={estilos.metricasTexto}>
-                      {venda.quantidadeAnimais} {plural(venda.quantidadeAnimais, 'cabeça', 'cabeças')} · {venda.pesoTotalKg.toLocaleString('pt-BR')} kg
+                      {venda.quantidadeAnimais} {plural(venda.quantidadeAnimais, 'cabeça', 'cabeças')} · {String(0)} kg
                     </Text>
                   </View>
 
@@ -264,7 +264,7 @@ export default function TelaVendas() {
                       {venda.itens.map((item, idx) => (
                         <View key={item.id ?? idx} style={estilos.itemAnimalLinha}>
                           <Text style={estilos.itemBrinco}>Brinco {item.brinco}</Text>
-                          <Text style={estilos.itemPeso}>{item.pesoKg.toLocaleString('pt-BR')} kg</Text>
+                          <Text style={estilos.itemPeso}>{String(item.actualWeightArroba ?? item.plannedWeightArroba ?? 0)} kg</Text>
                         </View>
                       ))}
                     </View>

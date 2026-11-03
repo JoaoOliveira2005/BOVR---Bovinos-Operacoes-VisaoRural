@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const VERSAO_BANCO = 4;
+const VERSAO_BANCO = 5;
 
 const MIGRACAO_1 = `
 CREATE TABLE IF NOT EXISTS grass_types (
@@ -539,12 +539,55 @@ async function garantirTabelasCriticas(db: SQLiteDatabase): Promise<void> {
   }
 
   if (!nomes.has('sales') && nomes.has('cattle')) {
-    await db.execAsync(MIGRACAO_4);
+    await db.execAsync(MIGRACAO_5);
   } else if (nomes.has('sales') && nomes.has('cattle')) {
-    // Garante que as triggers de vendas usem NEW.tag_number / OLD.tag_number e 'dead'
-    await db.execAsync(TRIGGERS_VENDAS_V13);
+    // Garante schema atual de vendas (migração 5); remove triggers legados de sale_type.
+    await db.execAsync(`
+      DROP TRIGGER IF EXISTS trg_cattle_death_remove_from_planned_sales;
+      DROP TRIGGER IF EXISTS trg_cattle_delete_remove_from_planned_sales;
+      DROP TRIGGER IF EXISTS trg_cleanup_empty_planned_sales;
+    `);
   }
 }
+
+
+const MIGRACAO_5 = `
+DROP TRIGGER IF EXISTS trg_cattle_death_remove_from_planned_sales;
+DROP TRIGGER IF EXISTS trg_cattle_delete_remove_from_planned_sales;
+DROP TRIGGER IF EXISTS trg_cleanup_empty_planned_sales;
+
+DROP TABLE IF EXISTS sale_items;
+DROP TABLE IF EXISTS sales;
+
+CREATE TABLE sales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  status INTEGER NOT NULL DEFAULT 0 CHECK (status IN (0, 1)),
+  sold_on TEXT CHECK (sold_on IS NULL OR sold_on GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  buyer TEXT,
+  gross_amount_cents INTEGER CHECK (gross_amount_cents IS NULL OR gross_amount_cents > 0),
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE sale_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+  cattle_id INTEGER REFERENCES cattle(id) ON DELETE RESTRICT,
+  tag_number TEXT NOT NULL,
+  price_per_arroba_cents INTEGER NOT NULL CHECK (price_per_arroba_cents > 0),
+  planned_weight_arroba REAL CHECK (planned_weight_arroba IS NULL OR planned_weight_arroba > 0),
+  planned_total_cents INTEGER CHECK (planned_total_cents IS NULL OR planned_total_cents > 0),
+  actual_weight_arroba REAL CHECK (actual_weight_arroba IS NULL OR actual_weight_arroba > 0),
+  actual_total_cents INTEGER CHECK (actual_total_cents IS NULL OR actual_total_cents > 0),
+  UNIQUE (sale_id, cattle_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(status, sold_on);
+CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_cattle ON sale_items(cattle_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_tag_number ON sale_items(tag_number COLLATE NOCASE);
+`;
 
 export async function inicializarBanco(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('PRAGMA journal_mode = WAL;');
@@ -563,6 +606,7 @@ export async function inicializarBanco(db: SQLiteDatabase): Promise<void> {
     if (atual < 2) await db.execAsync(MIGRACAO_2);
     if (atual < 3) await db.execAsync(MIGRACAO_3);
     if (atual < 4) await db.execAsync(MIGRACAO_4);
+    if (atual < 5) await db.execAsync(MIGRACAO_5);
     await db.execAsync(`PRAGMA user_version = ${VERSAO_BANCO};`);
     await db.execAsync('COMMIT;');
   } catch (erro) {

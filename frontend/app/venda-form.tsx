@@ -103,9 +103,9 @@ export default function FormularioVenda() {
       if (id) {
         const venda = await servicoVendas.exigir(id);
         setTipo(venda.tipo);
-        setComprador(venda.comprador);
-        setDataVenda(isoParaData(venda.data));
-        setValor(centavosParaReais(venda.valorBrutoCentavos));
+        setComprador(venda.comprador ?? '');
+        setDataVenda(isoParaData(venda.data ?? ''));
+        setValor(centavosParaReais(venda.valorBrutoCentavos ?? 0));
         setObservacoes(venda.observacoes ?? '');
         if (venda.itens.length > 0) {
           setItens(
@@ -113,7 +113,7 @@ export default function FormularioVenda() {
               idTemp: String(it.id ?? idx + 1),
               animalId: it.animalId,
               brinco: it.brinco,
-              pesoKg: String(it.pesoKg).replace('.', ','),
+              pesoKg: String(it.actualWeightArroba ?? it.plannedWeightArroba ?? 0).replace('.', ','),
               manual:
                 !it.animalId &&
                 !listaAnimais.some((a) => a.brinco.toUpperCase() === it.brinco.toUpperCase()),
@@ -406,7 +406,9 @@ export default function FormularioVenda() {
         return {
           animalId: it.animalId ?? null,
           brinco: it.brinco.trim(),
-          pesoKg: peso,
+          pricePerArrobaCentavos: 1,
+          plannedWeightArroba: tipo === 'planejada' ? peso : null,
+          actualWeightArroba: tipo === 'realizada' ? peso : null,
         };
       });
 
